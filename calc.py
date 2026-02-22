@@ -1,3 +1,5 @@
+import math
+
 def calc(expression):
     result = 0
     op = '+'
@@ -265,6 +267,144 @@ def calc4(expression):
     return str(calculator.Expr())
 
 
+class Calculator5:
+    CONSTANTS = {
+        'pi': math.pi,
+        'e':  math.e,
+    }
+
+    def __init__(self, expression):
+        self.exp = []
+        self.idx = 0
+        i = 0
+        while i < len(expression):
+            c = expression[i]
+            if (c >= '0' and c <= '9') or c == '.':
+                j = i
+                while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                    j += 1
+                if j < len(expression) and expression[j] == '.':
+                    j += 1
+                    while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                        j += 1
+                # only consume e/E as scientific notation if followed by digit or sign+digit
+                if j < len(expression) and expression[j] in ('e', 'E'):
+                    k = j + 1
+                    if k < len(expression) and expression[k] in ('+', '-'):
+                        k += 1
+                    if k < len(expression) and expression[k] >= '0' and expression[k] <= '9':
+                        j = k
+                        while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                            j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c.isalpha():
+                j = i
+                while j < len(expression) and expression[j].isalpha():
+                    j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c in ('+', '-', '*', '/', '^', '(', ')'):
+                self.exp.append(c)
+                i += 1
+            elif c == ' ':
+                i += 1
+            else:
+                raise Exception(f"Invalid character '{c}'")
+
+    def PeekNextToken(self):
+        if self.idx >= len(self.exp):
+            return None
+        return self.exp[self.idx]
+
+    def PopNextToken(self):
+        if self.idx >= len(self.exp):
+            return None
+        result = self.exp[self.idx]
+        self.idx += 1
+        return result
+
+    def Expr(self):
+        return self.Sum()
+
+    def Value(self):
+        next = self.PeekNextToken()
+        if next == "(":
+            next = self.PopNextToken()
+            result = self.Expr()
+            next = self.PopNextToken()
+            if next != ")":
+                raise Exception(f"Invalid token {next}")
+        else:
+            next = self.PopNextToken()
+            if next is None:
+                raise Exception("Unexpected end")
+            if next[0].isalpha():
+                if next not in self.CONSTANTS:
+                    raise Exception(f"Unknown constant '{next}'")
+                result = self.CONSTANTS[next]
+            else:
+                try:
+                    if '.' in next or 'e' in next or 'E' in next:
+                        result = float(next)
+                    else:
+                        result = int(next)
+                except (ValueError, TypeError):
+                    raise Exception(f"Unexpected token {next}")
+        return result
+
+    def Power(self):
+        result = self.Value()
+        next = self.PeekNextToken()
+        if next == "^":
+            next = self.PopNextToken()
+            nextResult = self.Power()
+            result = pow(result, nextResult)
+        return result
+
+    def Product(self):
+        result = self.Power()
+        next = self.PeekNextToken()
+        while next == "*" or next == "/":
+            next = self.PopNextToken()
+            nextResult = self.Power()
+            if next == "*":
+                result *= nextResult
+            elif next == "/":
+                result /= nextResult
+            next = self.PeekNextToken()
+        return result
+
+    def Sum(self):
+        result = self.Product()
+        next = self.PeekNextToken()
+        while next == "+" or next == "-":
+            next = self.PopNextToken()
+            nextResult = self.Product()
+            if next == "+":
+                result += nextResult
+            elif next == "-":
+                result -= nextResult
+            next = self.PeekNextToken()
+        return result
+
+
+def calc5(expression):
+    '''
+    Extends calc4 to support named constants (pi, e).
+    Use the following grammar:
+    Expr    ← Sum
+    Sum     ← Product (('+' / '-') Product)*
+    Product ← Power (('*' / '/') Power)*
+    Power   ← Value ('^' Power)?
+    Value   ← Number / Constant / '(' Expr ')'
+    Number  ← [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
+    Constant ← 'pi' / 'e'
+    '''
+    calculator = Calculator5(expression)
+    return str(calculator.Expr())
+
+
 def test(expression, expected, op = calc, exception = None):
     caught = None
     try:
@@ -324,3 +464,12 @@ if __name__ == '__main__':
     test("(1e2+1.5e2)*2e1", "5000.0", calc4)
     test("1.5e3/1.5e2", "10.0", calc4)
     test("", "", calc4, Exception())
+
+    test("pi", "3.141592653589793", calc5)
+    test("e", "2.718281828459045", calc5)
+    test("2*pi", "6.283185307179586", calc5)
+    test("pi+e", "5.859874482048838", calc5)
+    test("e^2", "7.3890560989306495", calc5)
+    test("1e2*pi", "314.1592653589793", calc5)
+    test("1+2", "3", calc5)
+    test("foo", "", calc5, Exception())

@@ -436,6 +436,403 @@ def calc7(expression):
     return format_complex(calculator.Parse())
 
 
+class Polynomial:
+    """Represents a polynomial: coeffs[i] is the coefficient of x^i."""
+
+    def __init__(self, coeffs=None, var='x'):
+        if coeffs is None:
+            coeffs = [0]
+        # Normalize coefficients: convert to int when possible
+        self.coeffs = [self._to_int(c) for c in coeffs]
+        self.var = var
+        self._trim()
+
+    @staticmethod
+    def _to_int(value):
+        """Convert float to int if it represents a whole number."""
+        if isinstance(value, complex):
+            if value.imag == 0:
+                value = value.real
+            else:
+                return value
+        if isinstance(value, float) and value == int(value) and math.isfinite(value):
+            return int(value)
+        return value
+
+    def _trim(self):
+        """Remove trailing zero coefficients, keep at least one."""
+        while len(self.coeffs) > 1 and self.coeffs[-1] == 0:
+            self.coeffs.pop()
+
+    @property
+    def degree(self):
+        if len(self.coeffs) == 1 and self.coeffs[0] == 0:
+            return 0
+        return len(self.coeffs) - 1
+
+    def is_constant(self):
+        return all(c == 0 for c in self.coeffs[1:])
+
+    def constant_value(self):
+        if not self.is_constant():
+            raise Exception("Polynomial is not a constant")
+        return self.coeffs[0]
+
+    def __add__(self, other):
+        if isinstance(other, (int, float, complex)):
+            other = Polynomial([other], var=self.var)
+        if not isinstance(other, Polynomial):
+            return NotImplemented
+        var = self.var if self.degree > 0 else other.var
+        n = max(len(self.coeffs), len(other.coeffs))
+        coeffs = [0] * n
+        for i in range(n):
+            a = self.coeffs[i] if i < len(self.coeffs) else 0
+            b = other.coeffs[i] if i < len(other.coeffs) else 0
+            coeffs[i] = a + b
+        return Polynomial(coeffs, var=var)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __neg__(self):
+        return Polynomial([-c for c in self.coeffs], var=self.var)
+
+    def __sub__(self, other):
+        if isinstance(other, (int, float, complex)):
+            other = Polynomial([other], var=self.var)
+        if not isinstance(other, Polynomial):
+            return NotImplemented
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return (-self) + other
+
+    def __mul__(self, other):
+        if isinstance(other, (int, float, complex)):
+            other = Polynomial([other], var=self.var)
+        if not isinstance(other, Polynomial):
+            return NotImplemented
+        var = self.var if self.degree > 0 else other.var
+        n = len(self.coeffs) + len(other.coeffs) - 1
+        coeffs = [0] * n
+        for i, a in enumerate(self.coeffs):
+            for j, b in enumerate(other.coeffs):
+                coeffs[i + j] += a * b
+        return Polynomial(coeffs, var=var)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if isinstance(other, Polynomial):
+            if not other.is_constant():
+                raise Exception("Can only divide polynomial by a scalar")
+            other = other.constant_value()
+        if isinstance(other, (int, float, complex)):
+            if other == 0:
+                raise Exception("Division by zero")
+            return Polynomial([c / other for c in self.coeffs], var=self.var)
+        return NotImplemented
+
+    def __rtruediv__(self, other):
+        if not self.is_constant():
+            raise Exception("Can only divide by a constant polynomial")
+        val = self.constant_value()
+        if val == 0:
+            raise Exception("Division by zero")
+        if isinstance(other, (int, float, complex)):
+            return Polynomial([other / val], var=self.var)
+        return NotImplemented
+
+    def __pow__(self, other):
+        if isinstance(other, Polynomial):
+            if not other.is_constant():
+                raise Exception("Exponent must be a constant")
+            other = other.constant_value()
+        if isinstance(other, (int, float, complex)):
+            # If base is constant, use numeric pow
+            if self.is_constant():
+                return Polynomial([pow(self.constant_value(), other)], var=self.var)
+            # For polynomials, only integer exponents >= 0
+            if isinstance(other, complex) or other != int(other) or other < 0:
+                raise Exception("Polynomial exponent must be a non-negative integer")
+            exp = int(other)
+            result = Polynomial([1], var=self.var)
+            for _ in range(exp):
+                result = result * self
+            return result
+        return NotImplemented
+
+    def __rpow__(self, other):
+        if not self.is_constant():
+            raise Exception("Exponent must be a constant polynomial")
+        return Polynomial([pow(other, self.constant_value())], var=self.var)
+
+    def __str__(self):
+        # If constant, format the number
+        if self.is_constant():
+            return self._fmt_num(self.coeffs[0])
+
+        parts = []
+        for i in range(len(self.coeffs) - 1, -1, -1):
+            c = self.coeffs[i]
+            if c == 0:
+                continue
+            if i == 0:
+                # Constant term
+                term = self._fmt_num(c)
+                if not parts:
+                    parts.append(term)
+                else:
+                    if isinstance(c, complex):
+                        parts.append('+' + term)
+                    elif c > 0:
+                        parts.append('+' + term)
+                    else:
+                        parts.append(term)
+            else:
+                # Variable term
+                var_part = self.var if i == 1 else f"{self.var}^{i}"
+                if c == 1:
+                    coeff_str = ''
+                elif c == -1:
+                    coeff_str = '-'
+                else:
+                    coeff_str = self._fmt_num(c) + '*'
+
+                term = coeff_str + var_part
+
+                if not parts:
+                    parts.append(term)
+                else:
+                    if isinstance(c, (int, float)) and not isinstance(c, complex):
+                        if c > 0:
+                            if c == 1:
+                                parts.append('+' + var_part)
+                            else:
+                                parts.append('+' + term)
+                        else:
+                            parts.append(term)
+                    else:
+                        parts.append('+' + term)
+
+        if not parts:
+            return '0'
+        return ''.join(parts)
+
+    @staticmethod
+    def _fmt_num(x):
+        x = Polynomial._to_int(x)
+        if isinstance(x, complex):
+            return format_complex(x)
+        if isinstance(x, float):
+            if math.isfinite(x) and x == int(x):
+                return str(int(x))
+            return str(x)
+        return str(x)
+
+    def solve(self):
+        """Solve polynomial = 0. Returns sorted list of solutions."""
+        self._trim()
+        deg = self.degree
+
+        if deg == 0:
+            if self.coeffs[0] == 0:
+                raise Exception("Infinite solutions")
+            else:
+                return []  # No solution (nonzero constant = 0)
+
+        if deg == 1:
+            # a1*x + a0 = 0 => x = -a0/a1
+            sol = -self.coeffs[0] / self.coeffs[1]
+            return [self._to_int(sol)]
+
+        if deg == 2:
+            a = self.coeffs[2]
+            b = self.coeffs[1]
+            c = self.coeffs[0]
+            disc = b * b - 4 * a * c
+            disc = self._to_int(disc)
+
+            if isinstance(disc, (int, float)) and not isinstance(disc, complex) and disc >= 0:
+                sqrt_disc = math.sqrt(disc)
+                x1 = (-b - sqrt_disc) / (2 * a)
+                x2 = (-b + sqrt_disc) / (2 * a)
+                x1 = self._to_int(x1)
+                x2 = self._to_int(x2)
+                if x1 == x2:
+                    return [x1]
+                solutions = sorted([x1, x2], key=lambda v: (v.real if isinstance(v, complex) else v))
+                return solutions
+            else:
+                # Complex roots
+                sqrt_disc = cmath.sqrt(disc)
+                x1 = (-b - sqrt_disc) / (2 * a)
+                x2 = (-b + sqrt_disc) / (2 * a)
+                x1 = self._to_int(x1)
+                x2 = self._to_int(x2)
+                # Sort by real part, then imaginary part
+                solutions = sorted([x1, x2], key=lambda v: (v.real, v.imag) if isinstance(v, complex) else (v, 0))
+                return solutions
+
+        raise Exception(f"Cannot solve degree {deg} polynomial")
+
+
+class Calculator8(Calculator7):
+    _var_name = None
+
+    def _is_variable(self, name):
+        """Check if a name is a single-letter variable (not a constant or function)."""
+        if len(name) != 1:
+            return False
+        if name in self.CONSTANTS:
+            return False
+        if name in self.FUNCTIONS:
+            return False
+        if not name.isalpha():
+            return False
+        return True
+
+    def Value(self):
+        next_tok = self.PeekNextToken()
+        if next_tok == "(":
+            self.PopNextToken()
+            result = self.Expr()
+            closing = self.PopNextToken()
+            if closing != ")":
+                raise Exception(f"Invalid token {closing}")
+            return result
+        elif next_tok is not None and next_tok[0].isalpha():
+            name = self.PopNextToken()
+            if self.PeekNextToken() == "(":
+                # Function call
+                if name not in self.FUNCTIONS:
+                    raise Exception(f"Unknown function '{name}'")
+                self.PopNextToken()  # consume '('
+                arg = self.Expr()
+                closing = self.PopNextToken()
+                if closing != ")":
+                    raise Exception(f"Invalid token {closing}")
+                if isinstance(arg, Polynomial):
+                    if arg.is_constant():
+                        val = arg.constant_value()
+                        result = self.FUNCTIONS[name](val)
+                        return Polynomial([result], var=arg.var)
+                    else:
+                        raise Exception(f"Cannot apply function '{name}' to polynomial with variable")
+                else:
+                    return self.FUNCTIONS[name](arg)
+            elif self._is_variable(name):
+                # Single-letter variable
+                if self._var_name is None:
+                    self._var_name = name
+                elif self._var_name != name:
+                    raise Exception(f"Multiple variables not supported: '{self._var_name}' and '{name}'")
+                return Polynomial([0, 1], var=name)
+            elif name in self.CONSTANTS:
+                return Polynomial([self.CONSTANTS[name]])
+            else:
+                raise Exception(f"Unknown identifier '{name}'")
+        else:
+            tok = self.PopNextToken()
+            if tok is None:
+                raise Exception("Unexpected end")
+            try:
+                if '.' in tok or 'e' in tok or 'E' in tok:
+                    val = float(tok)
+                else:
+                    val = int(tok)
+                return Polynomial([val])
+            except (ValueError, TypeError):
+                raise Exception(f"Unexpected token {tok}")
+
+    def Power(self):
+        result = self.Value()
+        next_tok = self.PeekNextToken()
+        if next_tok == "^":
+            self.PopNextToken()
+            exponent = self.Power()
+            if isinstance(result, Polynomial) and isinstance(exponent, Polynomial):
+                result = result ** exponent
+            elif isinstance(result, Polynomial):
+                result = result ** exponent
+            elif isinstance(exponent, Polynomial):
+                result = result ** exponent
+            else:
+                result = pow(result, exponent)
+        return result
+
+
+def calc8(expression):
+    '''
+    Extends calc7 to support single-variable algebra and equation solving.
+    - Without '=': simplify expression and return string
+    - With '=': solve equation and return solutions
+    '''
+    if '=' in expression:
+        sides = expression.split('=')
+        if len(sides) != 2:
+            raise Exception("Only one '=' sign allowed")
+        left_expr, right_expr = sides
+
+        calc_left = Calculator8(left_expr)
+        left = calc_left.Parse()
+        var_left = calc_left._var_name
+
+        calc_right = Calculator8(right_expr)
+        right = calc_right.Parse()
+        var_right = calc_right._var_name
+
+        # Determine variable name
+        var = var_left or var_right or 'x'
+
+        # Ensure both are Polynomials
+        if not isinstance(left, Polynomial):
+            left = Polynomial([left], var=var)
+        if not isinstance(right, Polynomial):
+            right = Polynomial([right], var=var)
+
+        # Set var on constant polynomials
+        if left.is_constant() and not right.is_constant():
+            left.var = right.var
+        elif right.is_constant() and not left.is_constant():
+            right.var = left.var
+
+        poly = left - right
+        poly.var = var
+        solutions = poly.solve()
+
+        if not solutions:
+            raise Exception("No solution")
+
+        parts = []
+        for sol in solutions:
+            parts.append(f"{var}={_format_solution(sol)}")
+        return '; '.join(parts)
+    else:
+        calculator = Calculator8(expression)
+        result = calculator.Parse()
+        if isinstance(result, Polynomial):
+            if result.is_constant():
+                val = result.constant_value()
+                return _format_solution(val)
+            return str(result)
+        return _format_solution(result)
+
+
+def _format_solution(value):
+    """Format a numeric value for output."""
+    value = Polynomial._to_int(value)
+    if isinstance(value, complex):
+        return format_complex(value)
+    if isinstance(value, float):
+        if math.isfinite(value) and value == int(value):
+            return str(int(value))
+        return str(value)
+    return str(value)
+
+
 def test(expression, expected, op = calc, exception = None):
     caught = None
     try:
@@ -531,3 +928,24 @@ if __name__ == '__main__':
     test("abs(3+4*i)", "5", calc7)
     test("e^(i*pi)", "-1", calc7)
     test("1+2", "3", calc7)
+
+    # calc8: Simplification tests
+    test("x", "x", calc8)
+    test("2*x+3*x", "5*x", calc8)
+    test("x*x", "x^2", calc8)
+    test("2+3", "5", calc8)
+    test("x+1-1", "x", calc8)
+    test("(x+1)*(x-1)", "x^2-1", calc8)
+    test("3*x^2+2*x+1", "3*x^2+2*x+1", calc8)
+
+    # calc8: Linear equation tests
+    test("2*x=4", "x=2", calc8)
+    test("x+1=3", "x=2", calc8)
+    test("3*x+2=x+10", "x=4", calc8)
+    test("x=5", "x=5", calc8)
+    test("2*(x+1)=6", "x=2", calc8)
+
+    # calc8: Quadratic equation tests
+    test("x^2=1", "x=-1; x=1", calc8)
+    test("x^2+2*x+1=0", "x=-1", calc8)
+    test("x^2-5*x+6=0", "x=2; x=3", calc8)

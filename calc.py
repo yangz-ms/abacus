@@ -318,7 +318,8 @@ def format_complex(value):
     if not isinstance(value, complex):
         return fmt_num(value)
 
-    real, imag = value.real, value.imag
+    real = round(value.real, 10)
+    imag = round(value.imag, 10)
 
     if imag == 0:
         return fmt_num(real)
@@ -432,4 +433,5 @@ if __name__ == '__main__':
     test("(1+i)*(1-i)", "2", calc6)
     test("(1+i)/(1-i)", "i", calc6)
     test("2+3*i", "2+3i", calc6)
+    test("e^(i*pi)", "-1", calc6)
     test("1+2", "3", calc6)

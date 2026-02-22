@@ -149,7 +149,7 @@ def calc3(expression):
     calculator = Calculator3(expression)
     return str(calculator.Expr())
 
-class Calculator4:
+class Calculator4(Calculator3):
     def __init__(self, expression):
         self.exp = []
         self.idx = 0
@@ -180,21 +180,6 @@ class Calculator4:
             else:
                 raise Exception(f"Invalid character '{c}'")
 
-    def PeekNextToken(self):
-        if self.idx >= len(self.exp):
-            return None
-        return self.exp[self.idx]
-
-    def PopNextToken(self):
-        if self.idx >= len(self.exp):
-            return None
-        result = self.exp[self.idx]
-        self.idx += 1
-        return result
-
-    def Expr(self):
-        return self.Sum()
-
     def Value(self):
         next = self.PeekNextToken()
         if next == "(":
@@ -216,41 +201,6 @@ class Calculator4:
                 raise Exception(f"Unexpected token {next}")
         return result
 
-    def Power(self):
-        result = self.Value()
-        next = self.PeekNextToken()
-        if next == "^":
-            next = self.PopNextToken()
-            nextResult = self.Power()
-            result = pow(result, nextResult)
-        return result
-
-    def Product(self):
-        result = self.Power()
-        next = self.PeekNextToken()
-        while next == "*" or next == "/":
-            next = self.PopNextToken()
-            nextResult = self.Power()
-            if next == "*":
-                result *= nextResult
-            elif next == "/":
-                result /= nextResult
-            next = self.PeekNextToken()
-        return result
-
-    def Sum(self):
-        result = self.Product()
-        next = self.PeekNextToken()
-        while next == "+" or next == "-":
-            next = self.PopNextToken()
-            nextResult = self.Product()
-            if next == "+":
-                result += nextResult
-            elif next == "-":
-                result -= nextResult
-            next = self.PeekNextToken()
-        return result
-
 
 def calc4(expression):
     '''
@@ -267,7 +217,7 @@ def calc4(expression):
     return str(calculator.Expr())
 
 
-class Calculator5:
+class Calculator5(Calculator4):
     CONSTANTS = {
         'pi': math.pi,
         'e':  math.e,
@@ -312,21 +262,6 @@ class Calculator5:
             else:
                 raise Exception(f"Invalid character '{c}'")
 
-    def PeekNextToken(self):
-        if self.idx >= len(self.exp):
-            return None
-        return self.exp[self.idx]
-
-    def PopNextToken(self):
-        if self.idx >= len(self.exp):
-            return None
-        result = self.exp[self.idx]
-        self.idx += 1
-        return result
-
-    def Expr(self):
-        return self.Sum()
-
     def Value(self):
         next = self.PeekNextToken()
         if next == "(":
@@ -351,41 +286,6 @@ class Calculator5:
                         result = int(next)
                 except (ValueError, TypeError):
                     raise Exception(f"Unexpected token {next}")
-        return result
-
-    def Power(self):
-        result = self.Value()
-        next = self.PeekNextToken()
-        if next == "^":
-            next = self.PopNextToken()
-            nextResult = self.Power()
-            result = pow(result, nextResult)
-        return result
-
-    def Product(self):
-        result = self.Power()
-        next = self.PeekNextToken()
-        while next == "*" or next == "/":
-            next = self.PopNextToken()
-            nextResult = self.Power()
-            if next == "*":
-                result *= nextResult
-            elif next == "/":
-                result /= nextResult
-            next = self.PeekNextToken()
-        return result
-
-    def Sum(self):
-        result = self.Product()
-        next = self.PeekNextToken()
-        while next == "+" or next == "-":
-            next = self.PopNextToken()
-            nextResult = self.Product()
-            if next == "+":
-                result += nextResult
-            elif next == "-":
-                result -= nextResult
-            next = self.PeekNextToken()
         return result
 
 

@@ -1,4 +1,5 @@
 import math
+import cmath
 
 def calc(expression):
     result = 0
@@ -318,8 +319,8 @@ def format_complex(value):
     if not isinstance(value, complex):
         return fmt_num(value)
 
-    real = round(value.real, 10)
-    imag = round(value.imag, 10)
+    real = round(value.real, 15)
+    imag = round(value.imag, 15)
 
     if imag == 0:
         return fmt_num(real)
@@ -352,6 +353,80 @@ def calc6(expression):
     Constant ← 'pi' / 'e' / 'i'
     '''
     calculator = Calculator6(expression)
+    return format_complex(calculator.Expr())
+
+
+class Calculator7(Calculator6):
+    FUNCTIONS = {
+        'sin':   cmath.sin,
+        'cos':   cmath.cos,
+        'tan':   cmath.tan,
+        'asin':  cmath.asin,
+        'acos':  cmath.acos,
+        'atan':  cmath.atan,
+        'sinh':  cmath.sinh,
+        'cosh':  cmath.cosh,
+        'tanh':  cmath.tanh,
+        'exp':   cmath.exp,
+        'ln':    cmath.log,
+        'log':   cmath.log10,
+        'sqrt':  cmath.sqrt,
+        'abs':   abs,
+    }
+
+    def Value(self):
+        next = self.PeekNextToken()
+        if next == "(":
+            self.PopNextToken()
+            result = self.Expr()
+            closing = self.PopNextToken()
+            if closing != ")":
+                raise Exception(f"Invalid token {closing}")
+        elif next is not None and next[0].isalpha():
+            name = self.PopNextToken()
+            if self.PeekNextToken() == "(":
+                if name not in self.FUNCTIONS:
+                    raise Exception(f"Unknown function '{name}'")
+                self.PopNextToken()  # consume '('
+                arg = self.Expr()
+                closing = self.PopNextToken()
+                if closing != ")":
+                    raise Exception(f"Invalid token {closing}")
+                result = self.FUNCTIONS[name](arg)
+            else:
+                if name not in self.CONSTANTS:
+                    raise Exception(f"Unknown constant '{name}'")
+                result = self.CONSTANTS[name]
+        else:
+            next = self.PopNextToken()
+            if next is None:
+                raise Exception("Unexpected end")
+            try:
+                if '.' in next or 'e' in next or 'E' in next:
+                    result = float(next)
+                else:
+                    result = int(next)
+            except (ValueError, TypeError):
+                raise Exception(f"Unexpected token {next}")
+        return result
+
+
+def calc7(expression):
+    '''
+    Extends calc6 to support common math functions.
+    Use the following grammar:
+    Expr     ← Sum
+    Sum      ← Product (('+' / '-') Product)*
+    Product  ← Power (('*' / '/') Power)*
+    Power    ← Value ('^' Power)?
+    Value    ← Function '(' Expr ')' / Constant / Number / '(' Expr ')'
+    Number   ← [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
+    Constant ← 'pi' / 'e' / 'i'
+    Function ← 'sin' / 'cos' / 'tan' / 'asin' / 'acos' / 'atan' /
+               'sinh' / 'cosh' / 'tanh' / 'exp' / 'ln' / 'log' /
+               'sqrt' / 'abs' / 'log'
+    '''
+    calculator = Calculator7(expression)
     return format_complex(calculator.Expr())
 
 
@@ -435,3 +510,18 @@ if __name__ == '__main__':
     test("2+3*i", "2+3i", calc6)
     test("e^(i*pi)", "-1", calc6)
     test("1+2", "3", calc6)
+
+    test("sin(0)", "0", calc7)
+    test("cos(0)", "1", calc7)
+    test("sin(pi/2)", "1", calc7)
+    test("tan(pi/4)", "1", calc7)
+    test("sinh(0)", "0", calc7)
+    test("cosh(0)", "1", calc7)
+    test("exp(1)", "2.718281828459045", calc7)
+    test("ln(1)", "0", calc7)
+    test("log(100)", "2", calc7)
+    test("sqrt(4)", "2", calc7)
+    test("sqrt(0-1)", "i", calc7)
+    test("abs(3+4*i)", "5", calc7)
+    test("e^(i*pi)", "-1", calc7)
+    test("1+2", "3", calc7)

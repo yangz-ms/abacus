@@ -83,6 +83,12 @@ class Calculator3:
 
     def Expr(self):
         return self.Sum()
+
+    def Parse(self):
+        result = self.Expr()
+        if self.PeekNextToken() is not None:
+            raise Exception(f"Unexpected token {self.PeekNextToken()}")
+        return result
     
     def Value(self):
         next = self.PeekNextToken()
@@ -148,7 +154,7 @@ def calc3(expression):
     '''
 
     calculator = Calculator3(expression)
-    return str(calculator.Expr())
+    return str(calculator.Parse())
 
 class Calculator4(Calculator3):
     def __init__(self, expression):
@@ -215,7 +221,7 @@ def calc4(expression):
     Number  ← [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
     '''
     calculator = Calculator4(expression)
-    return str(calculator.Expr())
+    return str(calculator.Parse())
 
 
 class Calculator5(Calculator4):
@@ -303,7 +309,7 @@ def calc5(expression):
     Constant ← 'pi' / 'e'
     '''
     calculator = Calculator5(expression)
-    return str(calculator.Expr())
+    return str(calculator.Parse())
 
 
 class Calculator6(Calculator5):
@@ -312,7 +318,7 @@ class Calculator6(Calculator5):
 
 def format_complex(value):
     def fmt_num(x):
-        if isinstance(x, float) and x == int(x):
+        if isinstance(x, float) and math.isfinite(x) and x == int(x):
             return str(int(x))
         return str(x)
 
@@ -353,7 +359,7 @@ def calc6(expression):
     Constant ← 'pi' / 'e' / 'i'
     '''
     calculator = Calculator6(expression)
-    return format_complex(calculator.Expr())
+    return format_complex(calculator.Parse())
 
 
 class Calculator7(Calculator6):
@@ -424,10 +430,10 @@ def calc7(expression):
     Constant ← 'pi' / 'e' / 'i'
     Function ← 'sin' / 'cos' / 'tan' / 'asin' / 'acos' / 'atan' /
                'sinh' / 'cosh' / 'tanh' / 'exp' / 'ln' / 'log' /
-               'sqrt' / 'abs' / 'log'
+               'sqrt' / 'abs'
     '''
     calculator = Calculator7(expression)
-    return format_complex(calculator.Expr())
+    return format_complex(calculator.Parse())
 
 
 def test(expression, expected, op = calc, exception = None):

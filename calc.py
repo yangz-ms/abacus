@@ -436,35 +436,110 @@ def calc7(expression):
     return format_complex(calculator.Parse())
 
 
-class Polynomial:
-    """Represents a polynomial: coeffs[i] is the coefficient of x^i."""
+def _to_int(value):
+    if isinstance(value, complex):
+        if value.imag == 0:
+            value = value.real
+        else:
+            return value
+    if isinstance(value, float) and value == int(value) and math.isfinite(value):
+        return int(value)
+    return value
 
+def _fmt_num(x):
+    x = _to_int(x)
+    if isinstance(x, complex):
+        return format_complex(x)
+    if isinstance(x, float):
+        if math.isfinite(x) and x == int(x):
+            return str(int(x))
+        return str(x)
+    return str(x)
+
+def _cbrt(z):
+    z = complex(z)
+    if z == 0:
+        return complex(0)
+    r = abs(z)
+    theta = cmath.phase(z)
+    return (r ** (1.0 / 3.0)) * cmath.exp(complex(0, theta / 3.0))
+
+def _clean_root(r, eps=1e-9):
+    if isinstance(r, complex):
+        real = r.real
+        imag = r.imag
+        if abs(real) < eps:
+            real = 0.0
+        if abs(imag) < eps:
+            imag = 0.0
+        if abs(real - round(real)) < eps:
+            real = round(real)
+        if abs(imag - round(imag)) < eps:
+            imag = round(imag)
+        if imag == 0:
+            return _to_int(real)
+        return _to_int(complex(real, imag))
+    else:
+        if abs(r) < eps:
+            return 0
+        if abs(r - round(r)) < eps:
+            return int(round(r))
+        return _to_int(r)
+
+def _unique_roots(roots, eps=1e-9):
+    unique = []
+    for r in roots:
+        is_dup = False
+        for u in unique:
+            if isinstance(r, complex) or isinstance(u, complex):
+                rc = complex(r) if not isinstance(r, complex) else r
+                uc = complex(u) if not isinstance(u, complex) else u
+                if abs(rc - uc) < eps:
+                    is_dup = True
+                    break
+            else:
+                if abs(r - u) < eps:
+                    is_dup = True
+                    break
+        if not is_dup:
+            unique.append(r)
+    return unique
+
+def _sort_roots(roots):
+    real_roots = []
+    complex_roots = []
+    for r in roots:
+        if isinstance(r, complex):
+            complex_roots.append(r)
+        else:
+            real_roots.append(r)
+    real_roots.sort()
+    complex_roots.sort(key=lambda v: (v.real, v.imag))
+    return real_roots + complex_roots
+
+def _format_solution(value):
+    value = _to_int(value)
+    if isinstance(value, complex):
+        return format_complex(value)
+    if isinstance(value, float):
+        if math.isfinite(value) and value == int(value):
+            return str(int(value))
+        return str(value)
+    return str(value)
+
+
+class Polynomial:
     def __init__(self, coeffs=None, var='x'):
         if coeffs is None:
             coeffs = [0]
-        # Normalize coefficients: convert to int when possible
-        self.coeffs = [self._to_int(c) for c in coeffs]
+        self.coeffs = [_to_int(c) for c in coeffs]
         self.var = var
         self._trim()
 
-    @staticmethod
-    def _to_int(value):
-        """Convert float to int if it represents a whole number."""
-        if isinstance(value, complex):
-            if value.imag == 0:
-                value = value.real
-            else:
-                return value
-        if isinstance(value, float) and value == int(value) and math.isfinite(value):
-            return int(value)
-        return value
-
     def _trim(self):
-        """Remove trailing zero coefficients, keep at least one."""
         while len(self.coeffs) > 1 and self.coeffs[-1] == 0:
             self.coeffs.pop()
 
-    @property
     def degree(self):
         if len(self.coeffs) == 1 and self.coeffs[0] == 0:
             return 0
@@ -483,7 +558,7 @@ class Polynomial:
             other = Polynomial([other], var=self.var)
         if not isinstance(other, Polynomial):
             return NotImplemented
-        var = self.var if self.degree > 0 else other.var
+        var = self.var if self.degree() > 0 else other.var
         n = max(len(self.coeffs), len(other.coeffs))
         coeffs = [0] * n
         for i in range(n):
@@ -513,7 +588,7 @@ class Polynomial:
             other = Polynomial([other], var=self.var)
         if not isinstance(other, Polynomial):
             return NotImplemented
-        var = self.var if self.degree > 0 else other.var
+        var = self.var if self.degree() > 0 else other.var
         n = len(self.coeffs) + len(other.coeffs) - 1
         coeffs = [0] * n
         for i, a in enumerate(self.coeffs):
@@ -551,10 +626,8 @@ class Polynomial:
                 raise Exception("Exponent must be a constant")
             other = other.constant_value()
         if isinstance(other, (int, float, complex)):
-            # If base is constant, use numeric pow
             if self.is_constant():
                 return Polynomial([pow(self.constant_value(), other)], var=self.var)
-            # For polynomials, only integer exponents >= 0
             if isinstance(other, complex) or other != int(other) or other < 0:
                 raise Exception("Polynomial exponent must be a non-negative integer")
             exp = int(other)
@@ -570,9 +643,8 @@ class Polynomial:
         return Polynomial([pow(other, self.constant_value())], var=self.var)
 
     def __str__(self):
-        # If constant, format the number
         if self.is_constant():
-            return self._fmt_num(self.coeffs[0])
+            return _fmt_num(self.coeffs[0])
 
         parts = []
         for i in range(len(self.coeffs) - 1, -1, -1):
@@ -580,8 +652,7 @@ class Polynomial:
             if c == 0:
                 continue
             if i == 0:
-                # Constant term
-                term = self._fmt_num(c)
+                term = _fmt_num(c)
                 if not parts:
                     parts.append(term)
                 else:
@@ -592,14 +663,13 @@ class Polynomial:
                     else:
                         parts.append(term)
             else:
-                # Variable term
                 var_part = self.var if i == 1 else f"{self.var}^{i}"
                 if c == 1:
                     coeff_str = ''
                 elif c == -1:
                     coeff_str = '-'
                 else:
-                    coeff_str = self._fmt_num(c) + '*'
+                    coeff_str = _fmt_num(c) + '*'
 
                 term = coeff_str + var_part
 
@@ -621,92 +691,9 @@ class Polynomial:
             return '0'
         return ''.join(parts)
 
-    @staticmethod
-    def _fmt_num(x):
-        x = Polynomial._to_int(x)
-        if isinstance(x, complex):
-            return format_complex(x)
-        if isinstance(x, float):
-            if math.isfinite(x) and x == int(x):
-                return str(int(x))
-            return str(x)
-        return str(x)
-
-    @staticmethod
-    def _cbrt(z):
-        """Compute the principal cube root of a complex number."""
-        z = complex(z)
-        if z == 0:
-            return complex(0)
-        r = abs(z)
-        theta = cmath.phase(z)
-        return (r ** (1.0 / 3.0)) * cmath.exp(complex(0, theta / 3.0))
-
-    @staticmethod
-    def _clean_root(r, eps=1e-9):
-        """Round near-integer and near-zero parts of a root."""
-        if isinstance(r, complex):
-            real = r.real
-            imag = r.imag
-            # Clean near-zero
-            if abs(real) < eps:
-                real = 0.0
-            if abs(imag) < eps:
-                imag = 0.0
-            # Clean near-integer
-            if abs(real - round(real)) < eps:
-                real = round(real)
-            if abs(imag - round(imag)) < eps:
-                imag = round(imag)
-            if imag == 0:
-                return Polynomial._to_int(real)
-            return Polynomial._to_int(complex(real, imag))
-        else:
-            if abs(r) < eps:
-                return 0
-            if abs(r - round(r)) < eps:
-                return int(round(r))
-            return Polynomial._to_int(r)
-
-    @staticmethod
-    def _unique_roots(roots, eps=1e-9):
-        """Remove duplicate roots (within epsilon tolerance)."""
-        unique = []
-        for r in roots:
-            is_dup = False
-            for u in unique:
-                if isinstance(r, complex) or isinstance(u, complex):
-                    rc = complex(r) if not isinstance(r, complex) else r
-                    uc = complex(u) if not isinstance(u, complex) else u
-                    if abs(rc - uc) < eps:
-                        is_dup = True
-                        break
-                else:
-                    if abs(r - u) < eps:
-                        is_dup = True
-                        break
-            if not is_dup:
-                unique.append(r)
-        return unique
-
-    @staticmethod
-    def _sort_roots(roots):
-        """Sort roots: real first (ascending), then complex by real part then imag part."""
-        real_roots = []
-        complex_roots = []
-        for r in roots:
-            if isinstance(r, complex):
-                complex_roots.append(r)
-            else:
-                real_roots.append(r)
-        real_roots.sort()
-        complex_roots.sort(key=lambda v: (v.real, v.imag))
-        return real_roots + complex_roots
-
     def solve(self):
-        """Solve polynomial = 0. Returns sorted list of solutions."""
         self._trim()
-        deg = self.degree
+        deg = self.degree()
 
         if deg == 0:
             if self.coeffs[0] == 0:
@@ -715,35 +702,32 @@ class Polynomial:
                 return []  # No solution (nonzero constant = 0)
 
         if deg == 1:
-            # a1*x + a0 = 0 => x = -a0/a1
             sol = -self.coeffs[0] / self.coeffs[1]
-            return [self._to_int(sol)]
+            return [_to_int(sol)]
 
         if deg == 2:
             a = self.coeffs[2]
             b = self.coeffs[1]
             c = self.coeffs[0]
             disc = b * b - 4 * a * c
-            disc = self._to_int(disc)
+            disc = _to_int(disc)
 
             if isinstance(disc, (int, float)) and not isinstance(disc, complex) and disc >= 0:
                 sqrt_disc = math.sqrt(disc)
                 x1 = (-b - sqrt_disc) / (2 * a)
                 x2 = (-b + sqrt_disc) / (2 * a)
-                x1 = self._to_int(x1)
-                x2 = self._to_int(x2)
+                x1 = _to_int(x1)
+                x2 = _to_int(x2)
                 if x1 == x2:
                     return [x1]
                 solutions = sorted([x1, x2], key=lambda v: (v.real if isinstance(v, complex) else v))
                 return solutions
             else:
-                # Complex roots
                 sqrt_disc = cmath.sqrt(disc)
                 x1 = (-b - sqrt_disc) / (2 * a)
                 x2 = (-b + sqrt_disc) / (2 * a)
-                x1 = self._to_int(x1)
-                x2 = self._to_int(x2)
-                # Sort by real part, then imaginary part
+                x1 = _to_int(x1)
+                x2 = _to_int(x2)
                 solutions = sorted([x1, x2], key=lambda v: (v.real, v.imag) if isinstance(v, complex) else (v, 0))
                 return solutions
 
@@ -753,73 +737,57 @@ class Polynomial:
             c = self.coeffs[1]
             d = self.coeffs[0]
 
-            # Depressed cubic substitution: x = t - b/(3a)
-            # Converts ax^3 + bx^2 + cx + d = 0 to t^3 + pt + q = 0
             shift = b / (3 * a)
             p = (3 * a * c - b * b) / (3 * a * a)
             q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a)
 
-            # Cardano's discriminant
             disc = -(4 * p * p * p + 27 * q * q)
 
             eps = 1e-9
 
             if abs(p) < eps and abs(q) < eps:
-                # Triple root: t = 0, so x = -shift
                 root = -shift
-                root = self._clean_root(root, eps)
+                root = _clean_root(root, eps)
                 return [root]
 
             if abs(disc) < eps:
-                # Double root case
                 if abs(q) < eps:
                     root = -shift
-                    root = self._clean_root(root, eps)
+                    root = _clean_root(root, eps)
                     return [root]
                 else:
                     root1 = 3 * q / p - shift
                     root2 = -3 * q / (2 * p) - shift
-                    root1 = self._clean_root(root1, eps)
-                    root2 = self._clean_root(root2, eps)
+                    root1 = _clean_root(root1, eps)
+                    root2 = _clean_root(root2, eps)
                     roots = sorted(set([root1, root2]), key=lambda v: v.real if isinstance(v, complex) else v)
                     return roots
 
-            # General Cardano's formula using complex arithmetic
-            # t^3 + pt + q = 0
             inner = complex(q * q / 4 + p * p * p / 27)
             sqrt_inner = cmath.sqrt(inner)
 
             u_base = -q / 2 + sqrt_inner
             v_base = -q / 2 - sqrt_inner
 
-            # Cube roots
-            u = self._cbrt(u_base)
-            v = self._cbrt(v_base)
+            u = _cbrt(u_base)
+            v = _cbrt(v_base)
 
-            # The three cube roots of unity
             omega = complex(-0.5, math.sqrt(3) / 2)
             omega2 = complex(-0.5, -math.sqrt(3) / 2)
 
-            # Choose v for each u such that u*v = -p/3
-            # Three roots of depressed cubic
             t1 = u + v
             t2 = u * omega + v * omega2
             t3 = u * omega2 + v * omega
 
-            # Convert back: x = t - shift
             raw_roots = [t1 - shift, t2 - shift, t3 - shift]
 
-            # Clean up roots
             solutions = []
             for r in raw_roots:
-                r = self._clean_root(r, eps)
+                r = _clean_root(r, eps)
                 solutions.append(r)
 
-            # Remove duplicates
-            solutions = self._unique_roots(solutions, eps)
-
-            # Sort: real roots first (ascending), then complex by real part then imag part
-            solutions = self._sort_roots(solutions)
+            solutions = _unique_roots(solutions, eps)
+            solutions = _sort_roots(solutions)
 
             return solutions
 
@@ -830,7 +798,6 @@ class Calculator8(Calculator7):
     _var_name = None
 
     def _is_variable(self, name):
-        """Check if a name is a single-letter variable (not a constant or function)."""
         if len(name) != 1:
             return False
         if name in self.CONSTANTS:
@@ -842,21 +809,20 @@ class Calculator8(Calculator7):
         return True
 
     def Value(self):
-        next_tok = self.PeekNextToken()
-        if next_tok == "(":
+        next = self.PeekNextToken()
+        if next == "(":
             self.PopNextToken()
             result = self.Expr()
-            closing = self.PopNextToken()
-            if closing != ")":
-                raise Exception(f"Invalid token {closing}")
+            next = self.PopNextToken()
+            if next != ")":
+                raise Exception(f"Invalid token {next}")
             return result
-        elif next_tok is not None and next_tok[0].isalpha():
+        elif next is not None and next[0].isalpha():
             name = self.PopNextToken()
             if self.PeekNextToken() == "(":
-                # Function call
                 if name not in self.FUNCTIONS:
                     raise Exception(f"Unknown function '{name}'")
-                self.PopNextToken()  # consume '('
+                self.PopNextToken()
                 arg = self.Expr()
                 closing = self.PopNextToken()
                 if closing != ")":
@@ -871,7 +837,6 @@ class Calculator8(Calculator7):
                 else:
                     return self.FUNCTIONS[name](arg)
             elif self._is_variable(name):
-                # Single-letter variable
                 if self._var_name is None:
                     self._var_name = name
                 elif self._var_name != name:
@@ -882,22 +847,22 @@ class Calculator8(Calculator7):
             else:
                 raise Exception(f"Unknown identifier '{name}'")
         else:
-            tok = self.PopNextToken()
-            if tok is None:
+            next = self.PopNextToken()
+            if next is None:
                 raise Exception("Unexpected end")
             try:
-                if '.' in tok or 'e' in tok or 'E' in tok:
-                    val = float(tok)
+                if '.' in next or 'e' in next or 'E' in next:
+                    val = float(next)
                 else:
-                    val = int(tok)
+                    val = int(next)
                 return Polynomial([val])
             except (ValueError, TypeError):
-                raise Exception(f"Unexpected token {tok}")
+                raise Exception(f"Unexpected token {next}")
 
     def Power(self):
         result = self.Value()
-        next_tok = self.PeekNextToken()
-        if next_tok == "^":
+        next = self.PeekNextToken()
+        if next == "^":
             self.PopNextToken()
             exponent = self.Power()
             if isinstance(result, Polynomial) and isinstance(exponent, Polynomial):
@@ -912,11 +877,6 @@ class Calculator8(Calculator7):
 
 
 def calc8(expression):
-    '''
-    Extends calc7 to support single-variable algebra and equation solving.
-    - Without '=': simplify expression and return string
-    - With '=': solve equation and return solutions
-    '''
     if '=' in expression:
         sides = expression.split('=')
         if len(sides) != 2:
@@ -931,16 +891,13 @@ def calc8(expression):
         right = calc_right.Parse()
         var_right = calc_right._var_name
 
-        # Determine variable name
         var = var_left or var_right or 'x'
 
-        # Ensure both are Polynomials
         if not isinstance(left, Polynomial):
             left = Polynomial([left], var=var)
         if not isinstance(right, Polynomial):
             right = Polynomial([right], var=var)
 
-        # Set var on constant polynomials
         if left.is_constant() and not right.is_constant():
             left.var = right.var
         elif right.is_constant() and not left.is_constant():
@@ -968,75 +925,43 @@ def calc8(expression):
         return _format_solution(result)
 
 
-def _format_solution(value):
-    """Format a numeric value for output."""
-    value = Polynomial._to_int(value)
-    if isinstance(value, complex):
-        return format_complex(value)
-    if isinstance(value, float):
-        if math.isfinite(value) and value == int(value):
-            return str(int(value))
-        return str(value)
-    return str(value)
-
-
 class MultiPolynomial:
-    """Represents a linear expression in multiple variables.
-    Stored as a dict: {'': constant, 'x': coeff_x, 'y': coeff_y, ...}
-    Only supports degree 1 per variable (linear terms only for multi-variable).
-    """
-
     def __init__(self, terms=None):
         if terms is None:
             terms = {'': 0}
         self.terms = {}
         for k, v in terms.items():
-            v = Polynomial._to_int(v)
+            v = _to_int(v)
             if v != 0 or k == '':
                 self.terms[k] = v
         if '' not in self.terms:
             self.terms[''] = 0
 
-    @staticmethod
-    def from_variable(var):
-        """Create a MultiPolynomial representing a single variable."""
-        return MultiPolynomial({'': 0, var: 1})
-
-    @staticmethod
-    def from_constant(value):
-        """Create a MultiPolynomial representing a constant."""
-        return MultiPolynomial({'': Polynomial._to_int(value)})
-
     def is_constant(self):
-        """Check if this is a constant (no variable terms)."""
         return all(v == 0 for k, v in self.terms.items() if k != '')
 
     def constant_value(self):
-        """Get the constant value (only valid if is_constant())."""
         if not self.is_constant():
             raise Exception("MultiPolynomial is not a constant")
         return self.terms.get('', 0)
 
     def variables(self):
-        """Return sorted list of variables with non-zero coefficients."""
         return sorted(k for k, v in self.terms.items() if k != '' and v != 0)
 
     def get_coeff(self, var):
-        """Get the coefficient of a variable."""
         return self.terms.get(var, 0)
 
     def _clean(self):
-        """Remove zero-coefficient variable terms."""
         to_remove = [k for k, v in self.terms.items() if k != '' and v == 0]
         for k in to_remove:
             del self.terms[k]
 
     def __add__(self, other):
         if isinstance(other, (int, float, complex)):
-            other = MultiPolynomial.from_constant(other)
+            other = _multi_from_const(other)
         if isinstance(other, Polynomial):
             if other.is_constant():
-                other = MultiPolynomial.from_constant(other.constant_value())
+                other = _multi_from_const(other.constant_value())
             else:
                 raise Exception("Cannot add non-constant Polynomial to MultiPolynomial")
         if not isinstance(other, MultiPolynomial):
@@ -1056,10 +981,10 @@ class MultiPolynomial:
 
     def __sub__(self, other):
         if isinstance(other, (int, float, complex)):
-            other = MultiPolynomial.from_constant(other)
+            other = _multi_from_const(other)
         if isinstance(other, Polynomial):
             if other.is_constant():
-                other = MultiPolynomial.from_constant(other.constant_value())
+                other = _multi_from_const(other.constant_value())
             else:
                 raise Exception("Cannot subtract non-constant Polynomial from MultiPolynomial")
         if not isinstance(other, MultiPolynomial):
@@ -1114,7 +1039,7 @@ class MultiPolynomial:
         if val == 0:
             raise Exception("Division by zero")
         if isinstance(other, (int, float, complex)):
-            return MultiPolynomial.from_constant(other / val)
+            return _multi_from_const(other / val)
         return NotImplemented
 
     def __pow__(self, other):
@@ -1128,13 +1053,13 @@ class MultiPolynomial:
             other = other.constant_value()
         if isinstance(other, (int, float, complex)):
             if self.is_constant():
-                return MultiPolynomial.from_constant(pow(self.constant_value(), other))
+                return _multi_from_const(pow(self.constant_value(), other))
             # For non-constant, only support integer exponents
             if isinstance(other, complex) or other != int(other) or other < 0:
                 raise Exception("MultiPolynomial exponent must be a non-negative integer")
             exp = int(other)
             if exp == 0:
-                return MultiPolynomial.from_constant(1)
+                return _multi_from_const(1)
             result = self
             for _ in range(exp - 1):
                 result = result * self
@@ -1144,18 +1069,17 @@ class MultiPolynomial:
     def __rpow__(self, other):
         if not self.is_constant():
             raise Exception("Exponent must be a constant MultiPolynomial")
-        return MultiPolynomial.from_constant(pow(other, self.constant_value()))
+        return _multi_from_const(pow(other, self.constant_value()))
 
     def __str__(self):
         if self.is_constant():
             return _format_solution(self.terms.get('', 0))
 
         parts = []
-        # Sort variables alphabetically
         var_keys = sorted(k for k in self.terms if k != '' and self.terms[k] != 0)
 
         for var in var_keys:
-            c = Polynomial._to_int(self.terms[var])
+            c = _to_int(self.terms[var])
             if c == 0:
                 continue
             if c == 1:
@@ -1179,8 +1103,7 @@ class MultiPolynomial:
                     else:
                         parts.append('+' + term)
 
-        # Constant term
-        const = Polynomial._to_int(self.terms.get('', 0))
+        const = _to_int(self.terms.get('', 0))
         if const != 0:
             const_str = _format_solution(const)
             if not parts:
@@ -1196,25 +1119,21 @@ class MultiPolynomial:
         return ''.join(parts)
 
 
+def _multi_from_var(var):
+    return MultiPolynomial({'': 0, var: 1})
+
+def _multi_from_const(value):
+    return MultiPolynomial({'': _to_int(value)})
+
+
 def solve_linear_system(equations, variables):
-    """Solve a system of linear equations using Gaussian elimination.
-
-    Args:
-        equations: list of MultiPolynomial (each represents equation = 0)
-        variables: list of variable names
-
-    Returns:
-        dict mapping variable name to solution value
-    """
     n = len(variables)
     m = len(equations)
 
     if m < n:
         raise Exception("Underdetermined system: not enough equations")
 
-    # Build augmented matrix [A | b] where A*vars = -constant
-    # Each equation: c_x1 * x1 + c_x2 * x2 + ... + constant = 0
-    # So: c_x1 * x1 + c_x2 * x2 + ... = -constant
+    # Build augmented matrix
     matrix = []
     for eq in equations:
         row = []
@@ -1225,7 +1144,6 @@ def solve_linear_system(equations, variables):
 
     # Gaussian elimination with partial pivoting
     for col in range(n):
-        # Find pivot
         max_val = abs(matrix[col][col])
         max_row = col
         for row in range(col + 1, m):
@@ -1236,10 +1154,8 @@ def solve_linear_system(equations, variables):
         if max_val < 1e-12:
             raise Exception("System has no unique solution (singular matrix)")
 
-        # Swap rows
         matrix[col], matrix[max_row] = matrix[max_row], matrix[col]
 
-        # Eliminate below
         for row in range(col + 1, m):
             factor = matrix[row][col] / matrix[col][col]
             for j in range(col, n + 1):
@@ -1255,23 +1171,21 @@ def solve_linear_system(equations, variables):
             s -= matrix[i][j] * solution[j]
         solution[i] = s / matrix[i][i]
 
-    # Clean up solutions: convert to int if close to integer
     result = {}
     for i, var in enumerate(variables):
         val = solution[i]
         if abs(val - round(val)) < 1e-9:
             val = int(round(val))
         else:
-            val = Polynomial._to_int(val)
+            val = _to_int(val)
         result[var] = val
 
     return result
 
 
 class Calculator9(Calculator8):
-    """Extends Calculator8 to support multi-variable linear algebra."""
-    _var_names = None  # Track all variable names encountered
-    _multi_mode = False  # Whether we've entered multi-variable mode
+    _var_names = None
+    _multi_mode = False
 
     def __init__(self, expression):
         self._var_names = set()
@@ -1279,55 +1193,51 @@ class Calculator9(Calculator8):
         super().__init__(expression)
 
     def _promote_to_multi(self, value):
-        """Convert a value to MultiPolynomial if needed."""
         if isinstance(value, MultiPolynomial):
             return value
         if isinstance(value, Polynomial):
             if value.is_constant():
-                return MultiPolynomial.from_constant(value.constant_value())
-            # Convert single-var polynomial to multi
-            if value.degree > 1:
+                return _multi_from_const(value.constant_value())
+            if value.degree() > 1:
                 raise Exception("Multi-variable mode only supports linear expressions per variable")
-            terms = {'': Polynomial._to_int(value.coeffs[0])}
+            terms = {'': _to_int(value.coeffs[0])}
             if len(value.coeffs) > 1:
-                terms[value.var] = Polynomial._to_int(value.coeffs[1])
+                terms[value.var] = _to_int(value.coeffs[1])
             return MultiPolynomial(terms)
         if isinstance(value, (int, float, complex)):
-            return MultiPolynomial.from_constant(value)
+            return _multi_from_const(value)
         return value
 
     def Value(self):
-        next_tok = self.PeekNextToken()
-        if next_tok == "(":
+        next = self.PeekNextToken()
+        if next == "(":
             self.PopNextToken()
             result = self.Expr()
-            closing = self.PopNextToken()
-            if closing != ")":
-                raise Exception(f"Invalid token {closing}")
+            next = self.PopNextToken()
+            if next != ")":
+                raise Exception(f"Invalid token {next}")
             return result
-        elif next_tok is not None and next_tok[0].isalpha():
+        elif next is not None and next[0].isalpha():
             name = self.PopNextToken()
             if self.PeekNextToken() == "(":
-                # Function call
                 if name not in self.FUNCTIONS:
                     raise Exception(f"Unknown function '{name}'")
-                self.PopNextToken()  # consume '('
+                self.PopNextToken()
                 arg = self.Expr()
                 closing = self.PopNextToken()
                 if closing != ")":
                     raise Exception(f"Invalid token {closing}")
-                # Functions only work on constants
                 if isinstance(arg, MultiPolynomial):
                     if arg.is_constant():
                         val = arg.constant_value()
-                        return MultiPolynomial.from_constant(self.FUNCTIONS[name](val))
+                        return _multi_from_const(self.FUNCTIONS[name](val))
                     else:
                         raise Exception(f"Cannot apply function '{name}' to expression with variables")
                 elif isinstance(arg, Polynomial):
                     if arg.is_constant():
                         val = arg.constant_value()
                         if self._multi_mode:
-                            return MultiPolynomial.from_constant(self.FUNCTIONS[name](val))
+                            return _multi_from_const(self.FUNCTIONS[name](val))
                         result = self.FUNCTIONS[name](val)
                         return Polynomial([result], var=arg.var)
                     else:
@@ -1335,85 +1245,79 @@ class Calculator9(Calculator8):
                 else:
                     result = self.FUNCTIONS[name](arg)
                     if self._multi_mode:
-                        return MultiPolynomial.from_constant(result)
+                        return _multi_from_const(result)
                     return result
             elif self._is_variable(name):
-                # Single-letter variable
                 self._var_names.add(name)
                 if len(self._var_names) > 1 and not self._multi_mode:
                     self._multi_mode = True
                 if self._multi_mode:
-                    return MultiPolynomial.from_variable(name)
+                    return _multi_from_var(name)
                 else:
-                    # Single variable mode, use Polynomial
                     if self._var_name is None:
                         self._var_name = name
                     elif self._var_name != name:
-                        # This shouldn't happen because we check _var_names above
                         pass
                     return Polynomial([0, 1], var=name)
             elif name in self.CONSTANTS:
                 if self._multi_mode:
-                    return MultiPolynomial.from_constant(self.CONSTANTS[name])
+                    return _multi_from_const(self.CONSTANTS[name])
                 return Polynomial([self.CONSTANTS[name]])
             else:
                 raise Exception(f"Unknown identifier '{name}'")
         else:
-            tok = self.PopNextToken()
-            if tok is None:
+            next = self.PopNextToken()
+            if next is None:
                 raise Exception("Unexpected end")
             try:
-                if '.' in tok or 'e' in tok or 'E' in tok:
-                    val = float(tok)
+                if '.' in next or 'e' in next or 'E' in next:
+                    val = float(next)
                 else:
-                    val = int(tok)
+                    val = int(next)
                 if self._multi_mode:
-                    return MultiPolynomial.from_constant(val)
+                    return _multi_from_const(val)
                 return Polynomial([val])
             except (ValueError, TypeError):
-                raise Exception(f"Unexpected token {tok}")
+                raise Exception(f"Unexpected token {next}")
 
     def Product(self):
         result = self.Power()
-        next_tok = self.PeekNextToken()
-        while next_tok == "*" or next_tok == "/":
+        next = self.PeekNextToken()
+        while next == "*" or next == "/":
             self.PopNextToken()
             right = self.Power()
-            # Promote if needed for multi-mode
             if self._multi_mode:
                 result = self._promote_to_multi(result)
                 right = self._promote_to_multi(right)
-            if next_tok == "*":
+            if next == "*":
                 result = result * right
-            elif next_tok == "/":
+            elif next == "/":
                 result = result / right
-            next_tok = self.PeekNextToken()
+            next = self.PeekNextToken()
         return result
 
     def Sum(self):
         result = self.Product()
-        next_tok = self.PeekNextToken()
-        while next_tok == "+" or next_tok == "-":
+        next = self.PeekNextToken()
+        while next == "+" or next == "-":
             self.PopNextToken()
             right = self.Product()
-            # Promote if needed for multi-mode
             if self._multi_mode:
                 result = self._promote_to_multi(result)
                 right = self._promote_to_multi(right)
-            if next_tok == "+":
+            if next == "+":
                 result = result + right
-            elif next_tok == "-":
+            elif next == "-":
                 result = result - right
-            next_tok = self.PeekNextToken()
+            next = self.PeekNextToken()
         return result
 
     def Power(self):
         result = self.Value()
-        next_tok = self.PeekNextToken()
-        if next_tok == "^":
+        next = self.PeekNextToken()
+        if next == "^":
             self.PopNextToken()
             exponent = self.Power()
-            # Promote if needed for multi-mode
             if self._multi_mode:
                 result = self._promote_to_multi(result)
                 exponent = self._promote_to_multi(exponent)
@@ -1421,17 +1325,26 @@ class Calculator9(Calculator8):
         return result
 
 
+def _promote_to_multi_poly(value):
+    # Convert Polynomial or scalar to MultiPolynomial
+    if isinstance(value, MultiPolynomial):
+        return value
+    if isinstance(value, Polynomial):
+        if value.is_constant():
+            return _multi_from_const(value.constant_value())
+        else:
+            terms = {'': _to_int(value.coeffs[0])}
+            if len(value.coeffs) > 1:
+                terms[value.var] = _to_int(value.coeffs[1])
+            return MultiPolynomial(terms)
+    if isinstance(value, (int, float, complex)):
+        return _multi_from_const(value)
+    return value
+
+
 def calc9(expression):
-    '''
-    Extends calc8 to support multi-variable linear algebra and systems of linear equations.
-    - Multiple equations separated by ';' are solved as a system
-    - Single-variable expressions fall back to calc8 behavior
-    - Multi-variable expressions are simplified or solved
-    '''
-    # Check for system of equations (multiple ';'-separated parts that contain '=')
     if ';' in expression:
         equation_strs = [s.strip() for s in expression.split(';')]
-        # Parse each equation
         all_equations = []
         all_vars = set()
         for eq_str in equation_strs:
@@ -1447,31 +1360,11 @@ def calc9(expression):
             calc_right = Calculator9(right_str)
             right = calc_right.Parse()
 
-            # Collect variables
             for c in [calc_left, calc_right]:
                 all_vars.update(c._var_names)
 
-            # Promote to MultiPolynomial
-            if isinstance(left, Polynomial):
-                if left.is_constant():
-                    left = MultiPolynomial.from_constant(left.constant_value())
-                else:
-                    terms = {'': Polynomial._to_int(left.coeffs[0])}
-                    if len(left.coeffs) > 1:
-                        terms[left.var] = Polynomial._to_int(left.coeffs[1])
-                    left = MultiPolynomial(terms)
-            elif isinstance(left, (int, float, complex)):
-                left = MultiPolynomial.from_constant(left)
-            if isinstance(right, Polynomial):
-                if right.is_constant():
-                    right = MultiPolynomial.from_constant(right.constant_value())
-                else:
-                    terms = {'': Polynomial._to_int(right.coeffs[0])}
-                    if len(right.coeffs) > 1:
-                        terms[right.var] = Polynomial._to_int(right.coeffs[1])
-                    right = MultiPolynomial(terms)
-            elif isinstance(right, (int, float, complex)):
-                right = MultiPolynomial.from_constant(right)
+            left = _promote_to_multi_poly(left)
+            right = _promote_to_multi_poly(right)
 
             eq = left - right
             all_equations.append(eq)
@@ -1484,7 +1377,6 @@ def calc9(expression):
         return '; '.join(parts)
 
     elif '=' in expression:
-        # Single equation
         sides = expression.split('=')
         if len(sides) != 2:
             raise Exception("Only one '=' sign allowed")
@@ -1503,7 +1395,6 @@ def calc9(expression):
         all_vars = vars_left | vars_right
 
         if len(all_vars) <= 1:
-            # Single variable - use Polynomial solve (same as calc8)
             var = var_left or var_right or 'x'
             if not isinstance(left, Polynomial):
                 if isinstance(left, MultiPolynomial):
@@ -1541,27 +1432,8 @@ def calc9(expression):
                 parts.append(f"{var}={_format_solution(sol)}")
             return '; '.join(parts)
         else:
-            # Multi-variable equation - promote and solve as system
-            if isinstance(left, Polynomial):
-                if left.is_constant():
-                    left = MultiPolynomial.from_constant(left.constant_value())
-                else:
-                    terms = {'': Polynomial._to_int(left.coeffs[0])}
-                    if len(left.coeffs) > 1:
-                        terms[left.var] = Polynomial._to_int(left.coeffs[1])
-                    left = MultiPolynomial(terms)
-            elif isinstance(left, (int, float, complex)):
-                left = MultiPolynomial.from_constant(left)
-            if isinstance(right, Polynomial):
-                if right.is_constant():
-                    right = MultiPolynomial.from_constant(right.constant_value())
-                else:
-                    terms = {'': Polynomial._to_int(right.coeffs[0])}
-                    if len(right.coeffs) > 1:
-                        terms[right.var] = Polynomial._to_int(right.coeffs[1])
-                    right = MultiPolynomial(terms)
-            elif isinstance(right, (int, float, complex)):
-                right = MultiPolynomial.from_constant(right)
+            left = _promote_to_multi_poly(left)
+            right = _promote_to_multi_poly(right)
 
             eq = left - right
             variables = sorted(all_vars)
@@ -1571,7 +1443,6 @@ def calc9(expression):
                 parts.append(f"{var}={_format_solution(solution[var])}")
             return '; '.join(parts)
     else:
-        # No equation - simplify
         calculator = Calculator9(expression)
         result = calculator.Parse()
         if isinstance(result, MultiPolynomial):

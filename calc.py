@@ -980,6 +980,612 @@ def _format_solution(value):
     return str(value)
 
 
+class MultiPolynomial:
+    """Represents a linear expression in multiple variables.
+    Stored as a dict: {'': constant, 'x': coeff_x, 'y': coeff_y, ...}
+    Only supports degree 1 per variable (linear terms only for multi-variable).
+    """
+
+    def __init__(self, terms=None):
+        if terms is None:
+            terms = {'': 0}
+        self.terms = {}
+        for k, v in terms.items():
+            v = Polynomial._to_int(v)
+            if v != 0 or k == '':
+                self.terms[k] = v
+        if '' not in self.terms:
+            self.terms[''] = 0
+
+    @staticmethod
+    def from_variable(var):
+        """Create a MultiPolynomial representing a single variable."""
+        return MultiPolynomial({'': 0, var: 1})
+
+    @staticmethod
+    def from_constant(value):
+        """Create a MultiPolynomial representing a constant."""
+        return MultiPolynomial({'': Polynomial._to_int(value)})
+
+    def is_constant(self):
+        """Check if this is a constant (no variable terms)."""
+        return all(v == 0 for k, v in self.terms.items() if k != '')
+
+    def constant_value(self):
+        """Get the constant value (only valid if is_constant())."""
+        if not self.is_constant():
+            raise Exception("MultiPolynomial is not a constant")
+        return self.terms.get('', 0)
+
+    def variables(self):
+        """Return sorted list of variables with non-zero coefficients."""
+        return sorted(k for k, v in self.terms.items() if k != '' and v != 0)
+
+    def get_coeff(self, var):
+        """Get the coefficient of a variable."""
+        return self.terms.get(var, 0)
+
+    def _clean(self):
+        """Remove zero-coefficient variable terms."""
+        to_remove = [k for k, v in self.terms.items() if k != '' and v == 0]
+        for k in to_remove:
+            del self.terms[k]
+
+    def __add__(self, other):
+        if isinstance(other, (int, float, complex)):
+            other = MultiPolynomial.from_constant(other)
+        if isinstance(other, Polynomial):
+            if other.is_constant():
+                other = MultiPolynomial.from_constant(other.constant_value())
+            else:
+                raise Exception("Cannot add non-constant Polynomial to MultiPolynomial")
+        if not isinstance(other, MultiPolynomial):
+            return NotImplemented
+        result = dict(self.terms)
+        for k, v in other.terms.items():
+            result[k] = result.get(k, 0) + v
+        mp = MultiPolynomial(result)
+        mp._clean()
+        return mp
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __neg__(self):
+        return MultiPolynomial({k: -v for k, v in self.terms.items()})
+
+    def __sub__(self, other):
+        if isinstance(other, (int, float, complex)):
+            other = MultiPolynomial.from_constant(other)
+        if isinstance(other, Polynomial):
+            if other.is_constant():
+                other = MultiPolynomial.from_constant(other.constant_value())
+            else:
+                raise Exception("Cannot subtract non-constant Polynomial from MultiPolynomial")
+        if not isinstance(other, MultiPolynomial):
+            return NotImplemented
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return (-self) + other
+
+    def __mul__(self, other):
+        if isinstance(other, (int, float, complex)):
+            return MultiPolynomial({k: v * other for k, v in self.terms.items()})
+        if isinstance(other, Polynomial):
+            if other.is_constant():
+                return self * other.constant_value()
+            else:
+                raise Exception("Cannot multiply MultiPolynomial by non-constant Polynomial")
+        if isinstance(other, MultiPolynomial):
+            if other.is_constant():
+                return self * other.constant_value()
+            if self.is_constant():
+                return other * self.constant_value()
+            raise Exception("Cannot multiply two non-constant MultiPolynomials (nonlinear)")
+        return NotImplemented
+
+    def __rmul__(self, other):
+        if isinstance(other, (int, float, complex)):
+            return self.__mul__(other)
+        if isinstance(other, Polynomial):
+            return self.__mul__(other)
+        return NotImplemented
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float, complex)):
+            if other == 0:
+                raise Exception("Division by zero")
+            return MultiPolynomial({k: v / other for k, v in self.terms.items()})
+        if isinstance(other, Polynomial):
+            if other.is_constant():
+                return self / other.constant_value()
+            raise Exception("Can only divide MultiPolynomial by a scalar")
+        if isinstance(other, MultiPolynomial):
+            if other.is_constant():
+                return self / other.constant_value()
+            raise Exception("Can only divide MultiPolynomial by a scalar")
+        return NotImplemented
+
+    def __rtruediv__(self, other):
+        if not self.is_constant():
+            raise Exception("Can only divide by a constant MultiPolynomial")
+        val = self.constant_value()
+        if val == 0:
+            raise Exception("Division by zero")
+        if isinstance(other, (int, float, complex)):
+            return MultiPolynomial.from_constant(other / val)
+        return NotImplemented
+
+    def __pow__(self, other):
+        if isinstance(other, MultiPolynomial):
+            if not other.is_constant():
+                raise Exception("Exponent must be a constant")
+            other = other.constant_value()
+        if isinstance(other, Polynomial):
+            if not other.is_constant():
+                raise Exception("Exponent must be a constant")
+            other = other.constant_value()
+        if isinstance(other, (int, float, complex)):
+            if self.is_constant():
+                return MultiPolynomial.from_constant(pow(self.constant_value(), other))
+            # For non-constant, only support integer exponents
+            if isinstance(other, complex) or other != int(other) or other < 0:
+                raise Exception("MultiPolynomial exponent must be a non-negative integer")
+            exp = int(other)
+            if exp == 0:
+                return MultiPolynomial.from_constant(1)
+            result = self
+            for _ in range(exp - 1):
+                result = result * self
+            return result
+        return NotImplemented
+
+    def __rpow__(self, other):
+        if not self.is_constant():
+            raise Exception("Exponent must be a constant MultiPolynomial")
+        return MultiPolynomial.from_constant(pow(other, self.constant_value()))
+
+    def __str__(self):
+        if self.is_constant():
+            return _format_solution(self.terms.get('', 0))
+
+        parts = []
+        # Sort variables alphabetically
+        var_keys = sorted(k for k in self.terms if k != '' and self.terms[k] != 0)
+
+        for var in var_keys:
+            c = Polynomial._to_int(self.terms[var])
+            if c == 0:
+                continue
+            if c == 1:
+                term = var
+            elif c == -1:
+                term = '-' + var
+            else:
+                term = _format_solution(c) + '*' + var
+
+            if not parts:
+                parts.append(term)
+            else:
+                if isinstance(c, (int, float)) and not isinstance(c, complex) and c > 0:
+                    if c == 1:
+                        parts.append('+' + var)
+                    else:
+                        parts.append('+' + _format_solution(c) + '*' + var)
+                else:
+                    if isinstance(c, (int, float)) and not isinstance(c, complex) and c < 0:
+                        parts.append(term)
+                    else:
+                        parts.append('+' + term)
+
+        # Constant term
+        const = Polynomial._to_int(self.terms.get('', 0))
+        if const != 0:
+            const_str = _format_solution(const)
+            if not parts:
+                parts.append(const_str)
+            else:
+                if isinstance(const, (int, float)) and not isinstance(const, complex) and const > 0:
+                    parts.append('+' + const_str)
+                else:
+                    parts.append(const_str)
+
+        if not parts:
+            return '0'
+        return ''.join(parts)
+
+
+def solve_linear_system(equations, variables):
+    """Solve a system of linear equations using Gaussian elimination.
+
+    Args:
+        equations: list of MultiPolynomial (each represents equation = 0)
+        variables: list of variable names
+
+    Returns:
+        dict mapping variable name to solution value
+    """
+    n = len(variables)
+    m = len(equations)
+
+    if m < n:
+        raise Exception("Underdetermined system: not enough equations")
+
+    # Build augmented matrix [A | b] where A*vars = -constant
+    # Each equation: c_x1 * x1 + c_x2 * x2 + ... + constant = 0
+    # So: c_x1 * x1 + c_x2 * x2 + ... = -constant
+    matrix = []
+    for eq in equations:
+        row = []
+        for var in variables:
+            row.append(float(eq.get_coeff(var)))
+        row.append(-float(eq.terms.get('', 0)))
+        matrix.append(row)
+
+    # Gaussian elimination with partial pivoting
+    for col in range(n):
+        # Find pivot
+        max_val = abs(matrix[col][col])
+        max_row = col
+        for row in range(col + 1, m):
+            if abs(matrix[row][col]) > max_val:
+                max_val = abs(matrix[row][col])
+                max_row = row
+
+        if max_val < 1e-12:
+            raise Exception("System has no unique solution (singular matrix)")
+
+        # Swap rows
+        matrix[col], matrix[max_row] = matrix[max_row], matrix[col]
+
+        # Eliminate below
+        for row in range(col + 1, m):
+            factor = matrix[row][col] / matrix[col][col]
+            for j in range(col, n + 1):
+                matrix[row][j] -= factor * matrix[col][j]
+
+    # Back substitution
+    solution = [0.0] * n
+    for i in range(n - 1, -1, -1):
+        if abs(matrix[i][i]) < 1e-12:
+            raise Exception("System has no unique solution (singular matrix)")
+        s = matrix[i][n]
+        for j in range(i + 1, n):
+            s -= matrix[i][j] * solution[j]
+        solution[i] = s / matrix[i][i]
+
+    # Clean up solutions: convert to int if close to integer
+    result = {}
+    for i, var in enumerate(variables):
+        val = solution[i]
+        if abs(val - round(val)) < 1e-9:
+            val = int(round(val))
+        else:
+            val = Polynomial._to_int(val)
+        result[var] = val
+
+    return result
+
+
+class Calculator9(Calculator8):
+    """Extends Calculator8 to support multi-variable linear algebra."""
+    _var_names = None  # Track all variable names encountered
+    _multi_mode = False  # Whether we've entered multi-variable mode
+
+    def __init__(self, expression):
+        self._var_names = set()
+        self._multi_mode = False
+        super().__init__(expression)
+
+    def _promote_to_multi(self, value):
+        """Convert a value to MultiPolynomial if needed."""
+        if isinstance(value, MultiPolynomial):
+            return value
+        if isinstance(value, Polynomial):
+            if value.is_constant():
+                return MultiPolynomial.from_constant(value.constant_value())
+            # Convert single-var polynomial to multi
+            if value.degree > 1:
+                raise Exception("Multi-variable mode only supports linear expressions per variable")
+            terms = {'': Polynomial._to_int(value.coeffs[0])}
+            if len(value.coeffs) > 1:
+                terms[value.var] = Polynomial._to_int(value.coeffs[1])
+            return MultiPolynomial(terms)
+        if isinstance(value, (int, float, complex)):
+            return MultiPolynomial.from_constant(value)
+        return value
+
+    def Value(self):
+        next_tok = self.PeekNextToken()
+        if next_tok == "(":
+            self.PopNextToken()
+            result = self.Expr()
+            closing = self.PopNextToken()
+            if closing != ")":
+                raise Exception(f"Invalid token {closing}")
+            return result
+        elif next_tok is not None and next_tok[0].isalpha():
+            name = self.PopNextToken()
+            if self.PeekNextToken() == "(":
+                # Function call
+                if name not in self.FUNCTIONS:
+                    raise Exception(f"Unknown function '{name}'")
+                self.PopNextToken()  # consume '('
+                arg = self.Expr()
+                closing = self.PopNextToken()
+                if closing != ")":
+                    raise Exception(f"Invalid token {closing}")
+                # Functions only work on constants
+                if isinstance(arg, MultiPolynomial):
+                    if arg.is_constant():
+                        val = arg.constant_value()
+                        return MultiPolynomial.from_constant(self.FUNCTIONS[name](val))
+                    else:
+                        raise Exception(f"Cannot apply function '{name}' to expression with variables")
+                elif isinstance(arg, Polynomial):
+                    if arg.is_constant():
+                        val = arg.constant_value()
+                        if self._multi_mode:
+                            return MultiPolynomial.from_constant(self.FUNCTIONS[name](val))
+                        result = self.FUNCTIONS[name](val)
+                        return Polynomial([result], var=arg.var)
+                    else:
+                        raise Exception(f"Cannot apply function '{name}' to polynomial with variable")
+                else:
+                    result = self.FUNCTIONS[name](arg)
+                    if self._multi_mode:
+                        return MultiPolynomial.from_constant(result)
+                    return result
+            elif self._is_variable(name):
+                # Single-letter variable
+                self._var_names.add(name)
+                if len(self._var_names) > 1 and not self._multi_mode:
+                    self._multi_mode = True
+                if self._multi_mode:
+                    return MultiPolynomial.from_variable(name)
+                else:
+                    # Single variable mode, use Polynomial
+                    if self._var_name is None:
+                        self._var_name = name
+                    elif self._var_name != name:
+                        # This shouldn't happen because we check _var_names above
+                        pass
+                    return Polynomial([0, 1], var=name)
+            elif name in self.CONSTANTS:
+                if self._multi_mode:
+                    return MultiPolynomial.from_constant(self.CONSTANTS[name])
+                return Polynomial([self.CONSTANTS[name]])
+            else:
+                raise Exception(f"Unknown identifier '{name}'")
+        else:
+            tok = self.PopNextToken()
+            if tok is None:
+                raise Exception("Unexpected end")
+            try:
+                if '.' in tok or 'e' in tok or 'E' in tok:
+                    val = float(tok)
+                else:
+                    val = int(tok)
+                if self._multi_mode:
+                    return MultiPolynomial.from_constant(val)
+                return Polynomial([val])
+            except (ValueError, TypeError):
+                raise Exception(f"Unexpected token {tok}")
+
+    def Product(self):
+        result = self.Power()
+        next_tok = self.PeekNextToken()
+        while next_tok == "*" or next_tok == "/":
+            self.PopNextToken()
+            right = self.Power()
+            # Promote if needed for multi-mode
+            if self._multi_mode:
+                result = self._promote_to_multi(result)
+                right = self._promote_to_multi(right)
+            if next_tok == "*":
+                result = result * right
+            elif next_tok == "/":
+                result = result / right
+            next_tok = self.PeekNextToken()
+        return result
+
+    def Sum(self):
+        result = self.Product()
+        next_tok = self.PeekNextToken()
+        while next_tok == "+" or next_tok == "-":
+            self.PopNextToken()
+            right = self.Product()
+            # Promote if needed for multi-mode
+            if self._multi_mode:
+                result = self._promote_to_multi(result)
+                right = self._promote_to_multi(right)
+            if next_tok == "+":
+                result = result + right
+            elif next_tok == "-":
+                result = result - right
+            next_tok = self.PeekNextToken()
+        return result
+
+    def Power(self):
+        result = self.Value()
+        next_tok = self.PeekNextToken()
+        if next_tok == "^":
+            self.PopNextToken()
+            exponent = self.Power()
+            # Promote if needed for multi-mode
+            if self._multi_mode:
+                result = self._promote_to_multi(result)
+                exponent = self._promote_to_multi(exponent)
+            result = result ** exponent
+        return result
+
+
+def calc9(expression):
+    '''
+    Extends calc8 to support multi-variable linear algebra and systems of linear equations.
+    - Multiple equations separated by ';' are solved as a system
+    - Single-variable expressions fall back to calc8 behavior
+    - Multi-variable expressions are simplified or solved
+    '''
+    # Check for system of equations (multiple ';'-separated parts that contain '=')
+    if ';' in expression:
+        equation_strs = [s.strip() for s in expression.split(';')]
+        # Parse each equation
+        all_equations = []
+        all_vars = set()
+        for eq_str in equation_strs:
+            if '=' not in eq_str:
+                raise Exception(f"Expected equation with '=' in system, got: {eq_str}")
+            sides = eq_str.split('=')
+            if len(sides) != 2:
+                raise Exception("Only one '=' sign allowed per equation")
+            left_str, right_str = sides
+
+            calc_left = Calculator9(left_str)
+            left = calc_left.Parse()
+            calc_right = Calculator9(right_str)
+            right = calc_right.Parse()
+
+            # Collect variables
+            for c in [calc_left, calc_right]:
+                all_vars.update(c._var_names)
+
+            # Promote to MultiPolynomial
+            if isinstance(left, Polynomial):
+                if left.is_constant():
+                    left = MultiPolynomial.from_constant(left.constant_value())
+                else:
+                    terms = {'': Polynomial._to_int(left.coeffs[0])}
+                    if len(left.coeffs) > 1:
+                        terms[left.var] = Polynomial._to_int(left.coeffs[1])
+                    left = MultiPolynomial(terms)
+            elif isinstance(left, (int, float, complex)):
+                left = MultiPolynomial.from_constant(left)
+            if isinstance(right, Polynomial):
+                if right.is_constant():
+                    right = MultiPolynomial.from_constant(right.constant_value())
+                else:
+                    terms = {'': Polynomial._to_int(right.coeffs[0])}
+                    if len(right.coeffs) > 1:
+                        terms[right.var] = Polynomial._to_int(right.coeffs[1])
+                    right = MultiPolynomial(terms)
+            elif isinstance(right, (int, float, complex)):
+                right = MultiPolynomial.from_constant(right)
+
+            eq = left - right
+            all_equations.append(eq)
+
+        variables = sorted(all_vars)
+        solution = solve_linear_system(all_equations, variables)
+        parts = []
+        for var in variables:
+            parts.append(f"{var}={_format_solution(solution[var])}")
+        return '; '.join(parts)
+
+    elif '=' in expression:
+        # Single equation
+        sides = expression.split('=')
+        if len(sides) != 2:
+            raise Exception("Only one '=' sign allowed")
+        left_expr, right_expr = sides
+
+        calc_left = Calculator9(left_expr)
+        left = calc_left.Parse()
+        var_left = calc_left._var_name
+        vars_left = calc_left._var_names
+
+        calc_right = Calculator9(right_expr)
+        right = calc_right.Parse()
+        var_right = calc_right._var_name
+        vars_right = calc_right._var_names
+
+        all_vars = vars_left | vars_right
+
+        if len(all_vars) <= 1:
+            # Single variable - use Polynomial solve (same as calc8)
+            var = var_left or var_right or 'x'
+            if not isinstance(left, Polynomial):
+                if isinstance(left, MultiPolynomial):
+                    if left.is_constant():
+                        left = Polynomial([left.constant_value()], var=var)
+                    else:
+                        v = left.variables()[0]
+                        left = Polynomial([left.terms.get('', 0), left.get_coeff(v)], var=v)
+                else:
+                    left = Polynomial([left], var=var)
+            if not isinstance(right, Polynomial):
+                if isinstance(right, MultiPolynomial):
+                    if right.is_constant():
+                        right = Polynomial([right.constant_value()], var=var)
+                    else:
+                        v = right.variables()[0]
+                        right = Polynomial([right.terms.get('', 0), right.get_coeff(v)], var=v)
+                else:
+                    right = Polynomial([right], var=var)
+
+            if left.is_constant() and not right.is_constant():
+                left.var = right.var
+            elif right.is_constant() and not left.is_constant():
+                right.var = left.var
+
+            poly = left - right
+            poly.var = var
+            solutions = poly.solve()
+
+            if not solutions:
+                raise Exception("No solution")
+
+            parts = []
+            for sol in solutions:
+                parts.append(f"{var}={_format_solution(sol)}")
+            return '; '.join(parts)
+        else:
+            # Multi-variable equation - promote and solve as system
+            if isinstance(left, Polynomial):
+                if left.is_constant():
+                    left = MultiPolynomial.from_constant(left.constant_value())
+                else:
+                    terms = {'': Polynomial._to_int(left.coeffs[0])}
+                    if len(left.coeffs) > 1:
+                        terms[left.var] = Polynomial._to_int(left.coeffs[1])
+                    left = MultiPolynomial(terms)
+            elif isinstance(left, (int, float, complex)):
+                left = MultiPolynomial.from_constant(left)
+            if isinstance(right, Polynomial):
+                if right.is_constant():
+                    right = MultiPolynomial.from_constant(right.constant_value())
+                else:
+                    terms = {'': Polynomial._to_int(right.coeffs[0])}
+                    if len(right.coeffs) > 1:
+                        terms[right.var] = Polynomial._to_int(right.coeffs[1])
+                    right = MultiPolynomial(terms)
+            elif isinstance(right, (int, float, complex)):
+                right = MultiPolynomial.from_constant(right)
+
+            eq = left - right
+            variables = sorted(all_vars)
+            solution = solve_linear_system([eq], variables)
+            parts = []
+            for var in variables:
+                parts.append(f"{var}={_format_solution(solution[var])}")
+            return '; '.join(parts)
+    else:
+        # No equation - simplify
+        calculator = Calculator9(expression)
+        result = calculator.Parse()
+        if isinstance(result, MultiPolynomial):
+            if result.is_constant():
+                return _format_solution(result.constant_value())
+            return str(result)
+        if isinstance(result, Polynomial):
+            if result.is_constant():
+                val = result.constant_value()
+                return _format_solution(val)
+            return str(result)
+        return _format_solution(result)
+
+
 def test(expression, expected, op = calc, exception = None):
     caught = None
     try:
@@ -1136,3 +1742,29 @@ if __name__ == '__main__':
     test("x^3=8", "x=2; x=-1-1.732050807568877i; x=-1+1.732050807568877i", calc8)
     test("x^3+1=0", "x=-1; x=0.5-0.866025403784439i; x=0.5+0.866025403784439i", calc8)
     test("x^3-x=0", "x=-1; x=0; x=1", calc8)  # x(x^2-1) = x(x-1)(x+1)
+
+    # calc9 single-variable (should work same as calc8)
+    test("2*x+3*x", "5*x", calc9)
+    test("2*x=4", "x=2", calc9)
+    test("x^2=1", "x=-1; x=1", calc9)
+    test("x^3-6*x^2+11*x-6=0", "x=1; x=2; x=3", calc9)
+    test("2+3", "5", calc9)
+
+    # Multi-variable simplification
+    test("x+y+x", "2*x+y", calc9)
+    test("3*x+2*y-x", "2*x+2*y", calc9)
+    test("x+y-x-y", "0", calc9)
+    test("2*x+3*y+x-y", "3*x+2*y", calc9)
+
+    # Two-variable linear systems
+    test("x+y=2; x-y=0", "x=1; y=1", calc9)
+    test("2*x+3*y=7; x-y=1", "x=2; y=1", calc9)
+    test("x+y=10; 2*x+y=15", "x=5; y=5", calc9)
+    test("x+2*y=5; 3*x-y=1", "x=1; y=2", calc9)
+    test("x=3; x+y=5", "x=3; y=2", calc9)
+
+    # Three-variable linear systems
+    test("x+y+z=6; x-y=0; x+z=4", "x=2; y=2; z=2", calc9)
+    test("x+y+z=3; x+y-z=1; x-y+z=1", "x=1; y=1; z=1", calc9)
+    test("x+y+z=10; x-y+z=4; x+y-z=2", "x=3; y=3; z=4", calc9)
+    test("2*x+y-z=1; x+y+z=6; x-y+2*z=5", "x=1; y=2; z=3", calc9)

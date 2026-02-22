@@ -405,6 +405,55 @@ def calc5(expression):
     return str(calculator.Expr())
 
 
+class Calculator6(Calculator5):
+    CONSTANTS = {**Calculator5.CONSTANTS, 'i': complex(0, 1)}
+
+
+def format_complex(value):
+    def fmt_num(x):
+        if isinstance(x, float) and x == int(x):
+            return str(int(x))
+        return str(x)
+
+    if not isinstance(value, complex):
+        return fmt_num(value)
+
+    real, imag = value.real, value.imag
+
+    if imag == 0:
+        return fmt_num(real)
+    if real == 0:
+        if imag == 1:
+            return 'i'
+        elif imag == -1:
+            return '-i'
+        return f"{fmt_num(imag)}i"
+    if imag == 1:
+        return f"{fmt_num(real)}+i"
+    elif imag == -1:
+        return f"{fmt_num(real)}-i"
+    elif imag > 0:
+        return f"{fmt_num(real)}+{fmt_num(imag)}i"
+    else:
+        return f"{fmt_num(real)}{fmt_num(imag)}i"
+
+
+def calc6(expression):
+    '''
+    Extends calc5 to support imaginary unit i and complex numbers.
+    Use the following grammar:
+    Expr    ← Sum
+    Sum     ← Product (('+' / '-') Product)*
+    Product ← Power (('*' / '/') Power)*
+    Power   ← Value ('^' Power)?
+    Value   ← Number / Constant / '(' Expr ')'
+    Number  ← [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
+    Constant ← 'pi' / 'e' / 'i'
+    '''
+    calculator = Calculator6(expression)
+    return format_complex(calculator.Expr())
+
+
 def test(expression, expected, op = calc, exception = None):
     caught = None
     try:
@@ -473,3 +522,14 @@ if __name__ == '__main__':
     test("1e2*pi", "314.1592653589793", calc5)
     test("1+2", "3", calc5)
     test("foo", "", calc5, Exception())
+
+    test("i", "i", calc6)
+    test("i*i", "-1", calc6)
+    test("i^2", "-1", calc6)
+    test("1+i", "1+i", calc6)
+    test("1-i", "1-i", calc6)
+    test("(1+i)*2", "2+2i", calc6)
+    test("(1+i)*(1-i)", "2", calc6)
+    test("(1+i)/(1-i)", "i", calc6)
+    test("2+3*i", "2+3i", calc6)
+    test("1+2", "3", calc6)

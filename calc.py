@@ -14,6 +14,8 @@ def calc(expression):
                 result -= current
             current = 0
             op = c
+        elif c != ' ':
+            raise Exception(f"Invalid character '{c}'")
     return str(result)
 
 def calc2(expression):
@@ -39,7 +41,9 @@ def calc2(expression):
                 result2 /= current
             current = 0
             op = c
-    
+        elif c != ' ':
+            raise Exception(f"Invalid character '{c}'")
+
     return str(result+result2)
 
 class Calculator3:
@@ -60,8 +64,7 @@ class Calculator3:
                 self.exp.append(str(c))
         if current != "":
             self.exp.append(current)
-        idx = 0
-        print(self.exp)
+        self.idx = 0
 
     def PeekNextToken(self):
         if self.idx >= len(self.exp):
@@ -141,8 +144,8 @@ def calc3(expression):
     Value   ← [0-9]+ / '(' Expr ')'
     '''
 
-    calc = Calculator3(expression)
-    return str(calc.Expr())
+    calculator = Calculator3(expression)
+    return str(calculator.Expr())
 
 def test(expression, expected, op = calc, exception = None):
     caught = None
@@ -165,30 +168,29 @@ def test(expression, expected, op = calc, exception = None):
             else:
                 print(f"❌ Testing {expression}, expected {expected}, result {result}")
 
-'''
-test("1+2+3", "6", calc)
-test("123+456 - 789", "-210", calc)
-test("123-456", "-333", calc)
+if __name__ == '__main__':
+    test("1+2+3", "6", calc)
+    test("123+456 - 789", "-210", calc)
+    test("123-456", "-333", calc)
 
-test("1+2+3", "6", calc2)
-test("123+456 - 789", "-210", calc2)
-test("123-456", "-333", calc2)
-test("1*2*3", "6", calc2)
-test("123+456*789", "359907", calc2)
-test("1+2*3-4", "3", calc2)
-test("1+2*3-5/4", "5.75", calc2)
-test("1*2*3*4*5/6", "20.0", calc2)
-'''
+    test("1+2+3", "6", calc2)
+    test("123+456 - 789", "-210", calc2)
+    test("123-456", "-333", calc2)
+    test("1*2*3", "6", calc2)
+    test("123+456*789", "359907", calc2)
+    test("1+2*3-4", "3", calc2)
+    test("1+2*3-5/4", "5.75", calc2)
+    test("1*2*3*4*5/6", "20.0", calc2)
 
-test("1+2+3", "6", calc3)
-test("123+456 - 789", "-210", calc3)
-test("123-456", "-333", calc3)
-test("1*2*3", "6", calc3)
-test("123+456*789", "359907", calc3)
-test("1+2*3-4", "3", calc3)
-test("1+2*3-5/4", "5.75", calc3)
-test("1*2*3*4*5/6", "20.0", calc3)
-test("1+2*(3-4)", "-1", calc3)
-test("(3^5+2)/(7*7)", "5.0", calc3)
-test("1**2", "", calc3, Exception())
-test("", "", calc3, Exception())
+    test("1+2+3", "6", calc3)
+    test("123+456 - 789", "-210", calc3)
+    test("123-456", "-333", calc3)
+    test("1*2*3", "6", calc3)
+    test("123+456*789", "359907", calc3)
+    test("1+2*3-4", "3", calc3)
+    test("1+2*3-5/4", "5.75", calc3)
+    test("1*2*3*4*5/6", "20.0", calc3)
+    test("1+2*(3-4)", "-1", calc3)
+    test("(3^5+2)/(7*7)", "5.0", calc3)
+    test("1**2", "", calc3, Exception())
+    test("", "", calc3, Exception())

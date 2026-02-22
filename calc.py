@@ -632,6 +632,77 @@ class Polynomial:
             return str(x)
         return str(x)
 
+    @staticmethod
+    def _cbrt(z):
+        """Compute the principal cube root of a complex number."""
+        z = complex(z)
+        if z == 0:
+            return complex(0)
+        r = abs(z)
+        theta = cmath.phase(z)
+        return (r ** (1.0 / 3.0)) * cmath.exp(complex(0, theta / 3.0))
+
+    @staticmethod
+    def _clean_root(r, eps=1e-9):
+        """Round near-integer and near-zero parts of a root."""
+        if isinstance(r, complex):
+            real = r.real
+            imag = r.imag
+            # Clean near-zero
+            if abs(real) < eps:
+                real = 0.0
+            if abs(imag) < eps:
+                imag = 0.0
+            # Clean near-integer
+            if abs(real - round(real)) < eps:
+                real = round(real)
+            if abs(imag - round(imag)) < eps:
+                imag = round(imag)
+            if imag == 0:
+                return Polynomial._to_int(real)
+            return Polynomial._to_int(complex(real, imag))
+        else:
+            if abs(r) < eps:
+                return 0
+            if abs(r - round(r)) < eps:
+                return int(round(r))
+            return Polynomial._to_int(r)
+
+    @staticmethod
+    def _unique_roots(roots, eps=1e-9):
+        """Remove duplicate roots (within epsilon tolerance)."""
+        unique = []
+        for r in roots:
+            is_dup = False
+            for u in unique:
+                if isinstance(r, complex) or isinstance(u, complex):
+                    rc = complex(r) if not isinstance(r, complex) else r
+                    uc = complex(u) if not isinstance(u, complex) else u
+                    if abs(rc - uc) < eps:
+                        is_dup = True
+                        break
+                else:
+                    if abs(r - u) < eps:
+                        is_dup = True
+                        break
+            if not is_dup:
+                unique.append(r)
+        return unique
+
+    @staticmethod
+    def _sort_roots(roots):
+        """Sort roots: real first (ascending), then complex by real part then imag part."""
+        real_roots = []
+        complex_roots = []
+        for r in roots:
+            if isinstance(r, complex):
+                complex_roots.append(r)
+            else:
+                real_roots.append(r)
+        real_roots.sort()
+        complex_roots.sort(key=lambda v: (v.real, v.imag))
+        return real_roots + complex_roots
+
     def solve(self):
         """Solve polynomial = 0. Returns sorted list of solutions."""
         self._trim()
@@ -675,6 +746,82 @@ class Polynomial:
                 # Sort by real part, then imaginary part
                 solutions = sorted([x1, x2], key=lambda v: (v.real, v.imag) if isinstance(v, complex) else (v, 0))
                 return solutions
+
+        if deg == 3:
+            a = self.coeffs[3]
+            b = self.coeffs[2]
+            c = self.coeffs[1]
+            d = self.coeffs[0]
+
+            # Depressed cubic substitution: x = t - b/(3a)
+            # Converts ax^3 + bx^2 + cx + d = 0 to t^3 + pt + q = 0
+            shift = b / (3 * a)
+            p = (3 * a * c - b * b) / (3 * a * a)
+            q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a)
+
+            # Cardano's discriminant
+            disc = -(4 * p * p * p + 27 * q * q)
+
+            eps = 1e-9
+
+            if abs(p) < eps and abs(q) < eps:
+                # Triple root: t = 0, so x = -shift
+                root = -shift
+                root = self._clean_root(root, eps)
+                return [root]
+
+            if abs(disc) < eps:
+                # Double root case
+                if abs(q) < eps:
+                    root = -shift
+                    root = self._clean_root(root, eps)
+                    return [root]
+                else:
+                    root1 = 3 * q / p - shift
+                    root2 = -3 * q / (2 * p) - shift
+                    root1 = self._clean_root(root1, eps)
+                    root2 = self._clean_root(root2, eps)
+                    roots = sorted(set([root1, root2]), key=lambda v: v.real if isinstance(v, complex) else v)
+                    return roots
+
+            # General Cardano's formula using complex arithmetic
+            # t^3 + pt + q = 0
+            inner = complex(q * q / 4 + p * p * p / 27)
+            sqrt_inner = cmath.sqrt(inner)
+
+            u_base = -q / 2 + sqrt_inner
+            v_base = -q / 2 - sqrt_inner
+
+            # Cube roots
+            u = self._cbrt(u_base)
+            v = self._cbrt(v_base)
+
+            # The three cube roots of unity
+            omega = complex(-0.5, math.sqrt(3) / 2)
+            omega2 = complex(-0.5, -math.sqrt(3) / 2)
+
+            # Choose v for each u such that u*v = -p/3
+            # Three roots of depressed cubic
+            t1 = u + v
+            t2 = u * omega + v * omega2
+            t3 = u * omega2 + v * omega
+
+            # Convert back: x = t - shift
+            raw_roots = [t1 - shift, t2 - shift, t3 - shift]
+
+            # Clean up roots
+            solutions = []
+            for r in raw_roots:
+                r = self._clean_root(r, eps)
+                solutions.append(r)
+
+            # Remove duplicates
+            solutions = self._unique_roots(solutions, eps)
+
+            # Sort: real roots first (ascending), then complex by real part then imag part
+            solutions = self._sort_roots(solutions)
+
+            return solutions
 
         raise Exception(f"Cannot solve degree {deg} polynomial")
 
@@ -945,7 +1092,47 @@ if __name__ == '__main__':
     test("x=5", "x=5", calc8)
     test("2*(x+1)=6", "x=2", calc8)
 
+    # calc8: More simplification tests
+    test("0*x", "0", calc8)
+    test("1*x", "x", calc8)
+    test("x+x+x", "3*x", calc8)
+    test("x^2+x^2", "2*x^2", calc8)
+    test("(x+1)^2", "x^2+2*x+1", calc8)
+    test("x*0", "0", calc8)
+    test("x-x", "0", calc8)
+    test("x^3", "x^3", calc8)
+    test("x*x*x", "x^3", calc8)
+    test("(x+1)*(x+1)", "x^2+2*x+1", calc8)
+    test("2*x*3", "6*x", calc8)
+    test("x^2-x^2", "0", calc8)
+    test("(x+1)*(x+2)", "x^2+3*x+2", calc8)
+
+    # calc8: More linear equation tests
+    test("5*x=0", "x=0", calc8)
+    test("x/2=3", "x=6", calc8)
+    test("10-x=3", "x=7", calc8)
+    test("x+x=8", "x=4", calc8)
+    test("3*x-1=2*x+4", "x=5", calc8)
+
     # calc8: Quadratic equation tests
     test("x^2=1", "x=-1; x=1", calc8)
     test("x^2+2*x+1=0", "x=-1", calc8)
     test("x^2-5*x+6=0", "x=2; x=3", calc8)
+    test("x^2=4", "x=-2; x=2", calc8)
+    test("x^2-1=0", "x=-1; x=1", calc8)
+    test("x^2+1=0", "x=-i; x=i", calc8)
+    test("2*x^2-8=0", "x=-2; x=2", calc8)
+    test("x^2-3*x=0", "x=0; x=3", calc8)
+    test("x^2-4*x+4=0", "x=2", calc8)
+    test("x^2+4*x+4=0", "x=-2", calc8)
+    test("x^2-2*x-3=0", "x=-1; x=3", calc8)
+
+    # calc8: Cubic equation tests
+    test("x^3-6*x^2+11*x-6=0", "x=1; x=2; x=3", calc8)
+    test("x^3-1=0", "x=1; x=-0.5-0.866025403784439i; x=-0.5+0.866025403784439i", calc8)
+    test("x^3=0", "x=0", calc8)
+    test("x^3-3*x^2+3*x-1=0", "x=1", calc8)
+    test("x^3+x^2-x-1=0", "x=-1; x=1", calc8)
+    test("x^3=8", "x=2; x=-1-1.732050807568877i; x=-1+1.732050807568877i", calc8)
+    test("x^3+1=0", "x=-1; x=0.5-0.866025403784439i; x=0.5+0.866025403784439i", calc8)
+    test("x^3-x=0", "x=-1; x=0; x=1", calc8)  # x(x^2-1) = x(x-1)(x+1)

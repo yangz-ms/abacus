@@ -147,6 +147,124 @@ def calc3(expression):
     calculator = Calculator3(expression)
     return str(calculator.Expr())
 
+class Calculator4:
+    def __init__(self, expression):
+        self.exp = []
+        self.idx = 0
+        i = 0
+        while i < len(expression):
+            c = expression[i]
+            if (c >= '0' and c <= '9') or c == '.':
+                j = i
+                while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                    j += 1
+                if j < len(expression) and expression[j] == '.':
+                    j += 1
+                    while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                        j += 1
+                if j < len(expression) and expression[j] in ('e', 'E'):
+                    j += 1
+                    if j < len(expression) and expression[j] in ('+', '-'):
+                        j += 1
+                    while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                        j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c in ('+', '-', '*', '/', '^', '(', ')'):
+                self.exp.append(c)
+                i += 1
+            elif c == ' ':
+                i += 1
+            else:
+                raise Exception(f"Invalid character '{c}'")
+
+    def PeekNextToken(self):
+        if self.idx >= len(self.exp):
+            return None
+        return self.exp[self.idx]
+
+    def PopNextToken(self):
+        if self.idx >= len(self.exp):
+            return None
+        result = self.exp[self.idx]
+        self.idx += 1
+        return result
+
+    def Expr(self):
+        return self.Sum()
+
+    def Value(self):
+        next = self.PeekNextToken()
+        if next == "(":
+            next = self.PopNextToken()
+            result = self.Expr()
+            next = self.PopNextToken()
+            if next != ")":
+                raise Exception(f"Invalid token {next}")
+        else:
+            next = self.PopNextToken()
+            if next is None:
+                raise Exception("Unexpected end")
+            try:
+                if '.' in next or 'e' in next or 'E' in next:
+                    result = float(next)
+                else:
+                    result = int(next)
+            except (ValueError, TypeError):
+                raise Exception(f"Unexpected token {next}")
+        return result
+
+    def Power(self):
+        result = self.Value()
+        next = self.PeekNextToken()
+        if next == "^":
+            next = self.PopNextToken()
+            nextResult = self.Power()
+            result = pow(result, nextResult)
+        return result
+
+    def Product(self):
+        result = self.Power()
+        next = self.PeekNextToken()
+        while next == "*" or next == "/":
+            next = self.PopNextToken()
+            nextResult = self.Power()
+            if next == "*":
+                result *= nextResult
+            elif next == "/":
+                result /= nextResult
+            next = self.PeekNextToken()
+        return result
+
+    def Sum(self):
+        result = self.Product()
+        next = self.PeekNextToken()
+        while next == "+" or next == "-":
+            next = self.PopNextToken()
+            nextResult = self.Product()
+            if next == "+":
+                result += nextResult
+            elif next == "-":
+                result -= nextResult
+            next = self.PeekNextToken()
+        return result
+
+
+def calc4(expression):
+    '''
+    Extends calc3 to support scientific notation and decimals.
+    Use the following grammar:
+    Expr    ← Sum
+    Sum     ← Product (('+' / '-') Product)*
+    Product ← Power (('*' / '/') Power)*
+    Power   ← Value ('^' Power)?
+    Value   ← Number / '(' Expr ')'
+    Number  ← [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
+    '''
+    calculator = Calculator4(expression)
+    return str(calculator.Expr())
+
+
 def test(expression, expected, op = calc, exception = None):
     caught = None
     try:
@@ -194,3 +312,15 @@ if __name__ == '__main__':
     test("(3^5+2)/(7*7)", "5.0", calc3)
     test("1**2", "", calc3, Exception())
     test("", "", calc3, Exception())
+
+    test("1+2+3", "6", calc4)
+    test("1+2*3-4", "3", calc4)
+    test("1e2", "100.0", calc4)
+    test("1.5e3", "1500.0", calc4)
+    test("2.5e-3", "0.0025", calc4)
+    test("1.5E+3", "1500.0", calc4)
+    test("1e2+1.5e2", "250.0", calc4)
+    test("1.5e3*2", "3000.0", calc4)
+    test("(1e2+1.5e2)*2e1", "5000.0", calc4)
+    test("1.5e3/1.5e2", "10.0", calc4)
+    test("", "", calc4, Exception())

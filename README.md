@@ -5,7 +5,7 @@ Simple calculator built incrementally, from basic arithmetic to symbolic algebra
 
 | Version | Description |
 |---------|-------------|
-| calc    | Add and subtract |
+| calc1   | Add and subtract |
 | calc2   | Multiply and divide with operator precedence |
 | calc3   | Recursive descent parser with parentheses and exponents |
 | calc4   | Scientific notation and decimals |
@@ -18,8 +18,8 @@ Simple calculator built incrementally, from basic arithmetic to symbolic algebra
 ## Examples
 
 ```
-calc("1+2+3")                       → "6"
-calc("123+456 - 789")               → "-210"
+calc1("1+2+3")                       → "6"
+calc1("123+456 - 789")               → "-210"
 
 calc2("1+2*3-4")                    → "3"
 calc2("1*2*3*4*5/6")                → "20.0"
@@ -50,8 +50,20 @@ calc9("x+y=2; x-y=0")              → "x=1; y=1"
 calc9("x+y+z=6; x-y=0; x+z=4")    → "x=2; y=2; z=2"
 ```
 
+## Web UI
+
+A web interface with LaTeX-rendered input/output, powered by FastAPI and KaTeX.
+
+```
+pip install -r requirements.txt
+python app.py
+```
+
+Then open http://localhost:8000.
+
 ## Run tests
 
 ```
-python -X utf8 calc.py
+python -X utf8 test_calc.py
+python -X utf8 tex_converter.py
 ```

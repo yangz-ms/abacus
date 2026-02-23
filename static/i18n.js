@@ -1,0 +1,231 @@
+/**
+ * Abacus — Internationalization data
+ *
+ * To add a new language:
+ *   1. Add an entry to the `languages` array (code, flag country-code, label)
+ *   2. Add a matching translation object under `translations`
+ *   3. Include calc1_desc..calc9_desc keys with translated calculator descriptions
+ *      (English descriptions come from app.py via the API, so the "en" block omits them)
+ *
+ * Flag images are loaded from https://flagcdn.com/w40/{flag}.png
+ */
+window.ABACUS_I18N = {
+
+  languages: [
+    { code: "en", flag: "us", label: "English" },
+    { code: "zh", flag: "cn", label: "\u4e2d\u6587" },
+    { code: "hi", flag: "in", label: "\u0939\u093f\u0928\u094d\u0926\u0940" },
+    { code: "es", flag: "es", label: "Espa\u00f1ol" },
+    { code: "fr", flag: "fr", label: "Fran\u00e7ais" },
+    { code: "ar", flag: "sa", label: "\u0627\u0644\u0639\u0631\u0628\u064a\u0629" },
+    { code: "pt", flag: "br", label: "Portugu\u00eas" },
+    { code: "ru", flag: "ru", label: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439" },
+    { code: "ja", flag: "jp", label: "\u65e5\u672c\u8a9e" },
+    { code: "de", flag: "de", label: "Deutsch" }
+  ],
+
+  translations: {
+
+    en: {
+      title: "Abacus",
+      tagline: "From arithmetic to algebra \u2014 beautifully rendered",
+      calculate: "Calculate",
+      input_label: "Input",
+      result_label: "Result",
+      error_label: "Error",
+      placeholder: "Enter an expression\u2026",
+      footer: "Powered by {0}",
+      conn_error: "Connection error: "
+    },
+
+    zh: {
+      title: "Abacus",
+      tagline: "\u4ece\u7b97\u672f\u5230\u4ee3\u6570 \u2014 \u7cbe\u7f8e\u5448\u73b0",
+      calculate: "\u8ba1\u7b97",
+      input_label: "\u8f93\u5165",
+      result_label: "\u7ed3\u679c",
+      error_label: "\u9519\u8bef",
+      placeholder: "\u8f93\u5165\u8868\u8fbe\u5f0f\u2026",
+      footer: "\u7531 {0} \u9a71\u52a8",
+      conn_error: "\u8fde\u63a5\u9519\u8bef\uff1a",
+      calc1_desc: "\u52a0\u51cf\u8fd0\u7b97",
+      calc2_desc: "\u56db\u5219\u8fd0\u7b97",
+      calc3_desc: "\u62ec\u53f7\u4e0e\u5e42",
+      calc4_desc: "\u79d1\u5b66\u8ba1\u6570\u6cd5",
+      calc5_desc: "\u5e38\u91cf (\u03c0, e)",
+      calc6_desc: "\u590d\u6570\u8fd0\u7b97",
+      calc7_desc: "\u6570\u5b66\u51fd\u6570",
+      calc8_desc: "\u4ee3\u6570\u4e0e\u65b9\u7a0b",
+      calc9_desc: "\u7ebf\u6027\u65b9\u7a0b\u7ec4"
+    },
+
+    hi: {
+      title: "Abacus",
+      tagline: "\u0905\u0902\u0915\u0917\u0923\u093f\u0924 \u0938\u0947 \u092c\u0940\u091c\u0917\u0923\u093f\u0924 \u0924\u0915 \u2014 \u0938\u0941\u0902\u0926\u0930 \u092a\u094d\u0930\u0938\u094d\u0924\u0941\u0924\u093f",
+      calculate: "\u0917\u0923\u0928\u093e \u0915\u0930\u0947\u0902",
+      input_label: "\u0907\u0928\u092a\u0941\u091f",
+      result_label: "\u092a\u0930\u093f\u0923\u093e\u092e",
+      error_label: "\u0924\u094d\u0930\u0941\u091f\u093f",
+      placeholder: "\u090f\u0915 \u0935\u094d\u092f\u0902\u091c\u0915 \u0926\u0930\u094d\u091c \u0915\u0930\u0947\u0902\u2026",
+      footer: "{0} \u0926\u094d\u0935\u093e\u0930\u093e \u0938\u0902\u091a\u093e\u0932\u093f\u0924",
+      conn_error: "\u0915\u0928\u0947\u0915\u094d\u0936\u0928 \u0924\u094d\u0930\u0941\u091f\u093f: ",
+      calc1_desc: "\u091c\u094b\u0921\u093c \u0914\u0930 \u0918\u091f\u093e\u0935",
+      calc2_desc: "\u0917\u0941\u0923\u093e \u0914\u0930 \u092d\u093e\u0917",
+      calc3_desc: "\u0915\u094b\u0937\u094d\u0920\u0915 \u0914\u0930 \u0918\u093e\u0924\u093e\u0902\u0915",
+      calc4_desc: "\u0935\u0948\u091c\u094d\u091e\u093e\u0928\u093f\u0915 \u0938\u0902\u0915\u0947\u0924\u0928",
+      calc5_desc: "\u0938\u094d\u0925\u093f\u0930\u093e\u0902\u0915 (\u03c0, e)",
+      calc6_desc: "\u0938\u092e\u094d\u092e\u093f\u0936\u094d\u0930 \u0938\u0902\u0916\u094d\u092f\u093e\u090f\u0901",
+      calc7_desc: "\u0917\u0923\u093f\u0924\u0940\u092f \u092b\u0932\u0928",
+      calc8_desc: "\u092c\u0940\u091c\u0917\u0923\u093f\u0924 \u0914\u0930 \u0938\u092e\u0940\u0915\u0930\u0923",
+      calc9_desc: "\u0930\u0948\u0916\u093f\u0915 \u0938\u092e\u0940\u0915\u0930\u0923 \u0928\u093f\u0915\u093e\u092f"
+    },
+
+    es: {
+      title: "Abacus",
+      tagline: "De aritm\u00e9tica a \u00e1lgebra \u2014 bellamente renderizado",
+      calculate: "Calcular",
+      input_label: "Entrada",
+      result_label: "Resultado",
+      error_label: "Error",
+      placeholder: "Ingresa una expresi\u00f3n\u2026",
+      footer: "Impulsado por {0}",
+      conn_error: "Error de conexi\u00f3n: ",
+      calc1_desc: "Suma y Resta",
+      calc2_desc: "Multiplicar y Dividir",
+      calc3_desc: "Par\u00e9ntesis y Exponentes",
+      calc4_desc: "Notaci\u00f3n Cient\u00edfica",
+      calc5_desc: "Constantes (\u03c0, e)",
+      calc6_desc: "N\u00fameros Complejos",
+      calc7_desc: "Funciones Matem\u00e1ticas",
+      calc8_desc: "\u00c1lgebra y Ecuaciones",
+      calc9_desc: "Sistemas Lineales"
+    },
+
+    fr: {
+      title: "Abacus",
+      tagline: "De l\u2019arithm\u00e9tique \u00e0 l\u2019alg\u00e8bre \u2014 magnifiquement rendu",
+      calculate: "Calculer",
+      input_label: "Entr\u00e9e",
+      result_label: "R\u00e9sultat",
+      error_label: "Erreur",
+      placeholder: "Entrez une expression\u2026",
+      footer: "Propuls\u00e9 par {0}",
+      conn_error: "Erreur de connexion : ",
+      calc1_desc: "Addition et Soustraction",
+      calc2_desc: "Multiplication et Division",
+      calc3_desc: "Parenth\u00e8ses et Exposants",
+      calc4_desc: "Notation Scientifique",
+      calc5_desc: "Constantes (\u03c0, e)",
+      calc6_desc: "Nombres Complexes",
+      calc7_desc: "Fonctions Math\u00e9matiques",
+      calc8_desc: "Alg\u00e8bre et \u00c9quations",
+      calc9_desc: "Syst\u00e8mes Lin\u00e9aires"
+    },
+
+    ar: {
+      title: "Abacus",
+      tagline: "\u0645\u0646 \u0627\u0644\u062d\u0633\u0627\u0628 \u0625\u0644\u0649 \u0627\u0644\u062c\u0628\u0631 \u2014 \u0628\u0639\u0631\u0636 \u062c\u0645\u064a\u0644",
+      calculate: "\u0627\u062d\u0633\u0628",
+      input_label: "\u0627\u0644\u0645\u062f\u062e\u0644",
+      result_label: "\u0627\u0644\u0646\u062a\u064a\u062c\u0629",
+      error_label: "\u062e\u0637\u0623",
+      placeholder: "\u0623\u062f\u062e\u0644 \u062a\u0639\u0628\u064a\u0631\u064b\u0627\u2026",
+      footer: "\u0645\u062f\u0639\u0648\u0645 \u0628\u0640 {0}",
+      conn_error: "\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0627\u062a\u0635\u0627\u0644: ",
+      calc1_desc: "\u0627\u0644\u062c\u0645\u0639 \u0648\u0627\u0644\u0637\u0631\u062d",
+      calc2_desc: "\u0627\u0644\u0636\u0631\u0628 \u0648\u0627\u0644\u0642\u0633\u0645\u0629",
+      calc3_desc: "\u0627\u0644\u0623\u0642\u0648\u0627\u0633 \u0648\u0627\u0644\u0623\u064f\u0633\u064f\u0633",
+      calc4_desc: "\u0627\u0644\u062a\u0631\u0645\u064a\u0632 \u0627\u0644\u0639\u0644\u0645\u064a",
+      calc5_desc: "\u0627\u0644\u062b\u0648\u0627\u0628\u062a (\u03c0, e)",
+      calc6_desc: "\u0627\u0644\u0623\u0639\u062f\u0627\u062f \u0627\u0644\u0645\u0631\u0643\u0628\u0629",
+      calc7_desc: "\u0627\u0644\u062f\u0648\u0627\u0644 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+      calc8_desc: "\u0627\u0644\u062c\u0628\u0631 \u0648\u0627\u0644\u0645\u0639\u0627\u062f\u0644\u0627\u062a",
+      calc9_desc: "\u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u062e\u0637\u064a\u0629"
+    },
+
+    pt: {
+      title: "Abacus",
+      tagline: "Da aritm\u00e9tica \u00e0 \u00e1lgebra \u2014 lindamente renderizado",
+      calculate: "Calcular",
+      input_label: "Entrada",
+      result_label: "Resultado",
+      error_label: "Erro",
+      placeholder: "Digite uma express\u00e3o\u2026",
+      footer: "Desenvolvido com {0}",
+      conn_error: "Erro de conex\u00e3o: ",
+      calc1_desc: "Adi\u00e7\u00e3o e Subtra\u00e7\u00e3o",
+      calc2_desc: "Multiplica\u00e7\u00e3o e Divis\u00e3o",
+      calc3_desc: "Par\u00eanteses e Expoentes",
+      calc4_desc: "Nota\u00e7\u00e3o Cient\u00edfica",
+      calc5_desc: "Constantes (\u03c0, e)",
+      calc6_desc: "N\u00fameros Complexos",
+      calc7_desc: "Fun\u00e7\u00f5es Matem\u00e1ticas",
+      calc8_desc: "\u00c1lgebra e Equa\u00e7\u00f5es",
+      calc9_desc: "Sistemas Lineares"
+    },
+
+    ru: {
+      title: "Abacus",
+      tagline: "\u041e\u0442 \u0430\u0440\u0438\u0444\u043c\u0435\u0442\u0438\u043a\u0438 \u0434\u043e \u0430\u043b\u0433\u0435\u0431\u0440\u044b \u2014 \u043a\u0440\u0430\u0441\u0438\u0432\u043e \u043e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u043e",
+      calculate: "\u0412\u044b\u0447\u0438\u0441\u043b\u0438\u0442\u044c",
+      input_label: "\u0412\u0432\u043e\u0434",
+      result_label: "\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442",
+      error_label: "\u041e\u0448\u0438\u0431\u043a\u0430",
+      placeholder: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u044b\u0440\u0430\u0436\u0435\u043d\u0438\u0435\u2026",
+      footer: "\u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043d\u0430 {0}",
+      conn_error: "\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u044f: ",
+      calc1_desc: "\u0421\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u0438 \u0432\u044b\u0447\u0438\u0442\u0430\u043d\u0438\u0435",
+      calc2_desc: "\u0423\u043c\u043d\u043e\u0436\u0435\u043d\u0438\u0435 \u0438 \u0434\u0435\u043b\u0435\u043d\u0438\u0435",
+      calc3_desc: "\u0421\u043a\u043e\u0431\u043a\u0438 \u0438 \u0441\u0442\u0435\u043f\u0435\u043d\u0438",
+      calc4_desc: "\u041d\u0430\u0443\u0447\u043d\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c",
+      calc5_desc: "\u041a\u043e\u043d\u0441\u0442\u0430\u043d\u0442\u044b (\u03c0, e)",
+      calc6_desc: "\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u043d\u044b\u0435 \u0447\u0438\u0441\u043b\u0430",
+      calc7_desc: "\u041c\u0430\u0442\u0435\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0444\u0443\u043d\u043a\u0446\u0438\u0438",
+      calc8_desc: "\u0410\u043b\u0433\u0435\u0431\u0440\u0430 \u0438 \u0443\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u044f",
+      calc9_desc: "\u041b\u0438\u043d\u0435\u0439\u043d\u044b\u0435 \u0441\u0438\u0441\u0442\u0435\u043c\u044b"
+    },
+
+    ja: {
+      title: "Abacus",
+      tagline: "\u7b97\u8853\u304b\u3089\u4ee3\u6570\u307e\u3067 \u2014 \u7f8e\u3057\u304f\u8868\u793a",
+      calculate: "\u8a08\u7b97",
+      input_label: "\u5165\u529b",
+      result_label: "\u7d50\u679c",
+      error_label: "\u30a8\u30e9\u30fc",
+      placeholder: "\u5f0f\u3092\u5165\u529b\u2026",
+      footer: "{0} \u3067\u52d5\u4f5c",
+      conn_error: "\u63a5\u7d9a\u30a8\u30e9\u30fc\uff1a",
+      calc1_desc: "\u52a0\u6e1b\u7b97",
+      calc2_desc: "\u56db\u5247\u6f14\u7b97",
+      calc3_desc: "\u62ec\u5f27\u3068\u7d2f\u4e57",
+      calc4_desc: "\u79d1\u5b66\u8868\u8a18\u6cd5",
+      calc5_desc: "\u5b9a\u6570 (\u03c0, e)",
+      calc6_desc: "\u8907\u7d20\u6570",
+      calc7_desc: "\u6570\u5b66\u95a2\u6570",
+      calc8_desc: "\u4ee3\u6570\u3068\u65b9\u7a0b\u5f0f",
+      calc9_desc: "\u9023\u7acb\u4e00\u6b21\u65b9\u7a0b\u5f0f"
+    },
+
+    de: {
+      title: "Abacus",
+      tagline: "Von Arithmetik bis Algebra \u2014 wundersch\u00f6n dargestellt",
+      calculate: "Berechnen",
+      input_label: "Eingabe",
+      result_label: "Ergebnis",
+      error_label: "Fehler",
+      placeholder: "Ausdruck eingeben\u2026",
+      footer: "Betrieben mit {0}",
+      conn_error: "Verbindungsfehler: ",
+      calc1_desc: "Addition und Subtraktion",
+      calc2_desc: "Multiplikation und Division",
+      calc3_desc: "Klammern und Exponenten",
+      calc4_desc: "Wissenschaftliche Notation",
+      calc5_desc: "Konstanten (\u03c0, e)",
+      calc6_desc: "Komplexe Zahlen",
+      calc7_desc: "Mathematische Funktionen",
+      calc8_desc: "Algebra und Gleichungen",
+      calc9_desc: "Lineare Systeme"
+    }
+
+  }
+};

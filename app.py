@@ -22,15 +22,60 @@ app.add_middleware(
 )
 
 CALCULATORS = {
-    "calc1": {"function": calc1, "description": "Basic addition and subtraction"},
-    "calc2": {"function": calc2, "description": "Add, subtract, multiply, and divide"},
-    "calc3": {"function": calc3, "description": "Parentheses and exponents (recursive descent parser)"},
-    "calc4": {"function": calc4, "description": "Scientific notation and decimals"},
-    "calc5": {"function": calc5, "description": "Named constants (pi, e)"},
-    "calc6": {"function": calc6, "description": "Complex numbers (imaginary unit i)"},
-    "calc7": {"function": calc7, "description": "Math functions (sin, cos, sqrt, ln, etc.)"},
-    "calc8": {"function": calc8, "description": "Algebra: simplify expressions and solve equations"},
-    "calc9": {"function": calc9, "description": "Multi-variable linear equation systems"},
+    "calc1": {
+        "function": calc1,
+        "description": "Basic addition and subtraction",
+        "short_desc": "Add & Subtract",
+        "examples": ["1+2+3", "123-456", "123+456-789"],
+    },
+    "calc2": {
+        "function": calc2,
+        "description": "Add, subtract, multiply, and divide",
+        "short_desc": "Multiply & Divide",
+        "examples": ["1+2*3-4", "123+456*789", "1*2*3*4*5/6"],
+    },
+    "calc3": {
+        "function": calc3,
+        "description": "Parentheses and exponents (recursive descent parser)",
+        "short_desc": "Parentheses & Exponents",
+        "examples": ["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"],
+    },
+    "calc4": {
+        "function": calc4,
+        "description": "Scientific notation and decimals",
+        "short_desc": "Scientific Notation",
+        "examples": ["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"],
+    },
+    "calc5": {
+        "function": calc5,
+        "description": "Named constants (pi, e)",
+        "short_desc": "Constants (pi, e)",
+        "examples": ["2*pi", "e^2", "pi+e"],
+    },
+    "calc6": {
+        "function": calc6,
+        "description": "Complex numbers (imaginary unit i)",
+        "short_desc": "Complex Numbers",
+        "examples": ["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"],
+    },
+    "calc7": {
+        "function": calc7,
+        "description": "Math functions (sin, cos, sqrt, ln, etc.)",
+        "short_desc": "Math Functions",
+        "examples": ["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"],
+    },
+    "calc8": {
+        "function": calc8,
+        "description": "Algebra: simplify expressions and solve equations",
+        "short_desc": "Algebra & Equations",
+        "examples": ["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"],
+    },
+    "calc9": {
+        "function": calc9,
+        "description": "Multi-variable linear equation systems",
+        "short_desc": "Linear Systems",
+        "examples": ["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"],
+    },
 }
 
 
@@ -88,7 +133,13 @@ async def calculate(request: CalculateRequest):
 @app.get("/api/calculators")
 async def list_calculators():
     return [
-        {"name": name, "description": info["description"]}
+        {
+            "id": name,
+            "name": name,
+            "description": info["description"],
+            "short_desc": info["short_desc"],
+            "examples": info["examples"],
+        }
         for name, info in CALCULATORS.items()
     ]
 

@@ -1,14 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CalcWeb</title>
+<title>Abacus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script>
+(function() {
+  var t = localStorage.getItem("abacus-theme");
+  if (!t) t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+})();
+</script>
 <style>
 *, *::before, *::after {
   box-sizing: border-box;
@@ -34,7 +41,22 @@
   --glow-strong: 0 0 30px rgba(74, 124, 255, 0.25);
   --radius: 12px;
   --radius-sm: 8px;
-  --transition: 0.3s ease;
+  --transition: 0.15s ease;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f0f0f8;
+  --bg-secondary: #e8e8f2;
+  --bg-card: rgba(255, 255, 255, 0.7);
+  --bg-card-hover: rgba(255, 255, 255, 0.85);
+  --border-color: rgba(100, 120, 200, 0.2);
+  --border-glow: rgba(80, 140, 255, 0.5);
+  --text-primary: #1a1a2e;
+  --text-secondary: #555570;
+  --text-dim: #8888a8;
+  --error-color: #d93251;
+  --glow-soft: 0 0 20px rgba(74, 124, 255, 0.1);
+  --glow-strong: 0 0 30px rgba(74, 124, 255, 0.18);
 }
 
 html {
@@ -52,6 +74,7 @@ body {
   align-items: center;
   line-height: 1.6;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body::before {
@@ -65,6 +88,12 @@ body::before {
               radial-gradient(ellipse at 70% 80%, rgba(6, 214, 160, 0.04) 0%, transparent 50%);
   z-index: -1;
   animation: bgShift 20s ease-in-out infinite alternate;
+  transition: background 0.5s ease;
+}
+
+[data-theme="light"] body::before {
+  background: radial-gradient(ellipse at 30% 20%, rgba(74, 124, 255, 0.03) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(6, 214, 160, 0.02) 0%, transparent 50%);
 }
 
 @keyframes bgShift {
@@ -84,6 +113,15 @@ header {
   padding: 48px 0 32px;
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 8px;
+  min-height: 48px;
+}
+
 header h1 {
   font-size: 2.8rem;
   font-weight: 700;
@@ -92,7 +130,6 @@ header h1 {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
 }
 
 header p {
@@ -100,6 +137,126 @@ header p {
   font-size: 1rem;
   font-weight: 300;
   letter-spacing: 0.01em;
+  transition: color 0.3s ease;
+}
+
+/* ===== LANGUAGE DROPDOWN ===== */
+.lang-dropdown {
+  position: absolute;
+  left: 0;
+  z-index: 100;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  outline: none;
+}
+
+.lang-btn:hover,
+.lang-btn:focus {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+}
+
+.flag-icon {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.lang-arrow {
+  font-size: 0.6rem;
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
+.lang-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  min-width: 170px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+[data-theme="light"] .lang-menu {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.lang-menu.open {
+  display: block;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lang-option:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.lang-option.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ===== THEME TOGGLE ===== */
+.theme-toggle {
+  position: absolute;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+  box-shadow: var(--glow-soft);
+  transform: translateY(-1px);
 }
 
 /* ===== CALCULATOR SELECTOR ===== */
@@ -136,10 +293,8 @@ header p {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: border-color var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
   white-space: nowrap;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   user-select: none;
 }
 
@@ -163,7 +318,7 @@ header p {
   color: var(--text-secondary);
   font-size: 0.9rem;
   min-height: 1.6em;
-  transition: opacity var(--transition);
+  transition: opacity var(--transition), color 0.3s ease;
 }
 
 /* ===== INPUT SECTION ===== */
@@ -262,9 +417,7 @@ header p {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all var(--transition);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  transition: border-color var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 
 .example-chip:hover {
@@ -279,7 +432,7 @@ header p {
   margin-bottom: 40px;
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
 }
 
@@ -303,7 +456,7 @@ header p {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   transition: all var(--transition);
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .output-card:hover {
@@ -318,6 +471,7 @@ header p {
   letter-spacing: 0.08em;
   color: var(--text-dim);
   margin-bottom: 12px;
+  transition: color 0.3s ease;
 }
 
 .output-card .katex-display {
@@ -333,6 +487,10 @@ header p {
   color: #06d6a0;
 }
 
+.katex-container {
+  overflow: hidden;
+}
+
 /* ===== ERROR CARD ===== */
 .error-card {
   padding: 18px 24px;
@@ -343,6 +501,7 @@ header p {
   font-size: 0.9rem;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  transition: all var(--transition);
 }
 
 .error-card .label {
@@ -361,9 +520,10 @@ footer {
   color: var(--text-dim);
   font-size: 0.8rem;
   margin-top: auto;
+  transition: color 0.3s ease;
 }
 
-footer span {
+footer .accent {
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -387,6 +547,8 @@ footer span {
   .btn-calc { width: 100%; padding: 14px; }
   .input-row input { font-size: 0.9rem; }
   .calc-pill { padding: 7px 14px; font-size: 0.8rem; }
+  .lang-btn { padding: 5px 8px; font-size: 0.75rem; }
+  .theme-toggle { width: 36px; height: 36px; font-size: 1rem; }
 }
 </style>
 </head>
@@ -396,26 +558,51 @@ footer span {
 
   <!-- HEADER -->
   <header>
-    <h1>CalcWeb</h1>
-    <p>From arithmetic to algebra &mdash; beautifully rendered</p>
+    <div class="header-row">
+      <div class="lang-dropdown" id="langDropdown">
+        <button class="lang-btn" id="langBtn" type="button">
+          <img class="flag-icon" id="langFlag" src="https://flagcdn.com/w40/us.png" alt="EN">
+          <span id="langLabel">English</span>
+          <span class="lang-arrow">&#9662;</span>
+        </button>
+        <div class="lang-menu" id="langMenu"></div>
+      </div>
+      <h1 data-i18n="title">Abacus</h1>
+      <button id="themeToggle" class="theme-toggle" type="button"></button>
+    </div>
+    <p data-i18n="tagline">From arithmetic to algebra &mdash; beautifully rendered</p>
   </header>
 
   <!-- CALCULATOR SELECTOR -->
   <section class="selector-section">
-    <div class="selector-scroll" id="selectorScroll"></div>
-    <div class="calc-description" id="calcDescription"></div>
+    <div class="selector-scroll" id="selectorScroll">
+      <button class="calc-pill active" data-id="calc1">calc1</button>
+      <button class="calc-pill" data-id="calc2">calc2</button>
+      <button class="calc-pill" data-id="calc3">calc3</button>
+      <button class="calc-pill" data-id="calc4">calc4</button>
+      <button class="calc-pill" data-id="calc5">calc5</button>
+      <button class="calc-pill" data-id="calc6">calc6</button>
+      <button class="calc-pill" data-id="calc7">calc7</button>
+      <button class="calc-pill" data-id="calc8">calc8</button>
+      <button class="calc-pill" data-id="calc9">calc9</button>
+    </div>
+    <div class="calc-description" id="calcDescription">Add &amp; Subtract</div>
   </section>
 
   <!-- INPUT -->
   <section class="input-section">
     <div class="input-row">
-      <input type="text" id="exprInput" placeholder="Enter an expression..." autocomplete="off" spellcheck="false">
+      <input type="text" id="exprInput" data-i18n-placeholder="placeholder" placeholder="Enter an expression..." autocomplete="off" spellcheck="false">
       <button class="btn-calc" id="calcBtn" type="button">
-        <span class="btn-text">Calculate</span>
+        <span class="btn-text" data-i18n="calculate">Calculate</span>
         <span class="spinner"></span>
       </button>
     </div>
-    <div class="examples-row" id="examplesRow"></div>
+    <div class="examples-row" id="examplesRow">
+      <button class="example-chip">1+2+3</button>
+      <button class="example-chip">123-456</button>
+      <button class="example-chip">123+456-789</button>
+    </div>
   </section>
 
   <!-- OUTPUT -->
@@ -425,79 +612,303 @@ footer span {
 
 </div>
 
-<footer>Powered by <span>Python</span></footer>
+<footer id="footerText">Powered by <span class="accent">Python</span></footer>
 
+<!-- i18n: loaded separately so translations are easy to manage -->
+<script src="/static/i18n.js"></script>
 <script>
 (function() {
   "use strict";
 
-  const CALCS = [
-    { id: "calc1", name: "calc1", desc: "Add & Subtract",       examples: ["1+2+3", "123+456-789"] },
-    { id: "calc2", name: "calc2", desc: "Multiply & Divide",    examples: ["1+2*3-4", "1*2*3*4*5/6"] },
-    { id: "calc3", name: "calc3", desc: "Parentheses & Exponents", examples: ["1+2*(3-4)", "(3^5+2)/(7*7)"] },
-    { id: "calc4", name: "calc4", desc: "Scientific Notation",  examples: ["1.5e3*2", "2.5e-3"] },
-    { id: "calc5", name: "calc5", desc: "Constants (pi, e)",    examples: ["2*pi", "e^2"] },
-    { id: "calc6", name: "calc6", desc: "Complex Numbers",      examples: ["(1+i)*(1-i)", "e^(i*pi)"] },
-    { id: "calc7", name: "calc7", desc: "Math Functions",       examples: ["sin(pi/2)", "sqrt(4)", "ln(1)"] },
-    { id: "calc8", name: "calc8", desc: "Algebra & Equations",  examples: ["2*x+3*x", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"] },
-    { id: "calc9", name: "calc9", desc: "Linear Systems",       examples: ["x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"] }
+  /* ============================================================
+   * I18N DATA — from external i18n.js, with built-in fallback
+   * ============================================================ */
+  var I18N = window.ABACUS_I18N || {
+    languages: [{ code: "en", flag: "us", label: "English" }],
+    translations: {
+      en: {
+        title: "Abacus",
+        tagline: "From arithmetic to algebra \u2014 beautifully rendered",
+        calculate: "Calculate",
+        input_label: "Input",
+        result_label: "Result",
+        error_label: "Error",
+        placeholder: "Enter an expression\u2026",
+        footer: "Powered by {0}",
+        conn_error: "Connection error: "
+      }
+    }
+  };
+
+  var LANGUAGES    = I18N.languages;
+  var TRANSLATIONS = I18N.translations;
+  var FLAG_URL     = "https://flagcdn.com/w40/";
+
+  /* ============================================================
+   * DEFAULT CALCULATORS (fallback when API is down)
+   * ============================================================ */
+  var DEFAULT_CALCS = [
+    { id: "calc1", name: "calc1", desc: "Add & Subtract",          examples: ["1+2+3", "123-456", "123+456-789"] },
+    { id: "calc2", name: "calc2", desc: "Multiply & Divide",       examples: ["1+2*3-4", "123+456*789", "1*2*3*4*5/6"] },
+    { id: "calc3", name: "calc3", desc: "Parentheses & Exponents", examples: ["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"] },
+    { id: "calc4", name: "calc4", desc: "Scientific Notation",     examples: ["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"] },
+    { id: "calc5", name: "calc5", desc: "Constants (pi, e)",       examples: ["2*pi", "e^2", "pi+e"] },
+    { id: "calc6", name: "calc6", desc: "Complex Numbers",         examples: ["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"] },
+    { id: "calc7", name: "calc7", desc: "Math Functions",          examples: ["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"] },
+    { id: "calc8", name: "calc8", desc: "Algebra & Equations",     examples: ["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"] },
+    { id: "calc9", name: "calc9", desc: "Linear Systems",          examples: ["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"] }
   ];
 
-  let currentCalc = CALCS[0];
+  /* ============================================================
+   * STATE
+   * ============================================================ */
+  var calcs = DEFAULT_CALCS.slice();
+  var currentCalc = calcs[0];
+  var currentLang = localStorage.getItem("abacus-lang") || "en";
+  var currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
 
-  const selectorScroll = document.getElementById("selectorScroll");
-  const calcDescription = document.getElementById("calcDescription");
-  const exprInput = document.getElementById("exprInput");
-  const calcBtn = document.getElementById("calcBtn");
-  const examplesRow = document.getElementById("examplesRow");
-  const outputSection = document.getElementById("outputSection");
-  const outputContent = document.getElementById("outputContent");
+  /* ============================================================
+   * HELPERS
+   * ============================================================ */
+  function t(key, fallback) {
+    var lang = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+    return lang[key] || TRANSLATIONS.en[key] || fallback || key;
+  }
 
-  // Build pills
-  CALCS.forEach(function(c) {
-    const pill = document.createElement("button");
-    pill.className = "calc-pill";
-    pill.textContent = c.name;
-    pill.setAttribute("data-id", c.id);
-    pill.addEventListener("click", function() { selectCalc(c); });
-    selectorScroll.appendChild(pill);
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function flagUrl(code) {
+    return FLAG_URL + code + ".png";
+  }
+
+  /* ============================================================
+   * DOM REFS
+   * ============================================================ */
+  var langDropdown    = document.getElementById("langDropdown");
+  var langBtn         = document.getElementById("langBtn");
+  var langFlag        = document.getElementById("langFlag");
+  var langLabel       = document.getElementById("langLabel");
+  var langMenu        = document.getElementById("langMenu");
+  var themeToggle     = document.getElementById("themeToggle");
+  var selectorScroll  = document.getElementById("selectorScroll");
+  var calcDescription = document.getElementById("calcDescription");
+  var exprInput       = document.getElementById("exprInput");
+  var calcBtn         = document.getElementById("calcBtn");
+  var examplesRow     = document.getElementById("examplesRow");
+  var outputSection   = document.getElementById("outputSection");
+  var outputContent   = document.getElementById("outputContent");
+  var footerText      = document.getElementById("footerText");
+
+  /* ============================================================
+   * THEME
+   * ============================================================ */
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", currentTheme);
+    themeToggle.textContent = currentTheme === "dark" ? "\u2600" : "\u263E";
+    localStorage.setItem("abacus-theme", currentTheme);
+  }
+
+  themeToggle.addEventListener("click", function() {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    applyTheme();
   });
+
+  applyTheme();
+
+  /* ============================================================
+   * LANGUAGE DROPDOWN
+   * ============================================================ */
+  function buildLangMenu() {
+    langMenu.innerHTML = "";
+    for (var i = 0; i < LANGUAGES.length; i++) {
+      (function(lang) {
+        var opt = document.createElement("div");
+        opt.className = "lang-option";
+        if (lang.code === currentLang) opt.className += " active";
+        opt.setAttribute("data-lang", lang.code);
+
+        var img = document.createElement("img");
+        img.className = "flag-icon";
+        img.src = flagUrl(lang.flag);
+        img.alt = lang.code.toUpperCase();
+
+        var span = document.createElement("span");
+        span.textContent = lang.label;
+
+        opt.appendChild(img);
+        opt.appendChild(span);
+        opt.addEventListener("click", function() {
+          setLanguage(lang.code);
+          langMenu.classList.remove("open");
+        });
+        langMenu.appendChild(opt);
+      })(LANGUAGES[i]);
+    }
+  }
+
+  function updateLangButton() {
+    var lang = null;
+    for (var i = 0; i < LANGUAGES.length; i++) {
+      if (LANGUAGES[i].code === currentLang) { lang = LANGUAGES[i]; break; }
+    }
+    if (!lang) lang = LANGUAGES[0];
+    langFlag.src = flagUrl(lang.flag);
+    langFlag.alt = lang.code.toUpperCase();
+    langLabel.textContent = lang.label;
+    var opts = langMenu.querySelectorAll(".lang-option");
+    for (var j = 0; j < opts.length; j++) {
+      if (opts[j].getAttribute("data-lang") === currentLang) {
+        opts[j].className = "lang-option active";
+      } else {
+        opts[j].className = "lang-option";
+      }
+    }
+  }
+
+  langBtn.addEventListener("click", function(e) {
+    e.stopPropagation();
+    langMenu.classList.toggle("open");
+  });
+
+  document.addEventListener("click", function(e) {
+    if (!langDropdown.contains(e.target)) {
+      langMenu.classList.remove("open");
+    }
+  });
+
+  function setLanguage(code) {
+    currentLang = code;
+    localStorage.setItem("abacus-lang", currentLang);
+    applyTranslations();
+    buildPills();
+  }
+
+  /* ============================================================
+   * I18N
+   * ============================================================ */
+  function applyTranslations() {
+    var elems = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < elems.length; i++) {
+      elems[i].textContent = t(elems[i].getAttribute("data-i18n"));
+    }
+    var placeholders = document.querySelectorAll("[data-i18n-placeholder]");
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].placeholder = t(placeholders[j].getAttribute("data-i18n-placeholder"));
+    }
+    document.title = t("title");
+    document.documentElement.lang = currentLang;
+    updateLangButton();
+    updateFooter();
+  }
+
+  function updateFooter() {
+    var template = t("footer");
+    footerText.innerHTML = template.replace("{0}", '<span class="accent">Python</span>');
+  }
+
+  /* ============================================================
+   * PILLS & CALCULATOR SELECTION
+   * ============================================================ */
+
+  // Attach click handlers to EXISTING static pills and example chips
+  // so the page works before any JS rebuild occurs.
+  function attachHandlers() {
+    var pills = selectorScroll.querySelectorAll(".calc-pill");
+    for (var i = 0; i < pills.length; i++) {
+      (function(pill) {
+        var calcId = pill.getAttribute("data-id");
+        pill.addEventListener("click", function() {
+          var c = findCalc(calcId);
+          if (c) selectCalc(c);
+        });
+      })(pills[i]);
+    }
+    var chips = examplesRow.querySelectorAll(".example-chip");
+    for (var j = 0; j < chips.length; j++) {
+      (function(chip) {
+        chip.addEventListener("click", function() {
+          exprInput.value = chip.textContent;
+          doCalculate();
+        });
+      })(chips[j]);
+    }
+  }
+
+  function findCalc(id) {
+    for (var i = 0; i < calcs.length; i++) {
+      if (calcs[i].id === id) return calcs[i];
+    }
+    return null;
+  }
+
+  // Full rebuild — only called after fetch succeeds or language changes.
+  function buildPills() {
+    if (calcs.length === 0) return;
+    selectorScroll.innerHTML = "";
+    for (var i = 0; i < calcs.length; i++) {
+      (function(c) {
+        var pill = document.createElement("button");
+        pill.className = "calc-pill";
+        if (currentCalc && currentCalc.id === c.id) pill.className += " active";
+        pill.textContent = c.name;
+        pill.setAttribute("data-id", c.id);
+        pill.addEventListener("click", function() { selectCalc(c); });
+        selectorScroll.appendChild(pill);
+      })(calcs[i]);
+    }
+    if (currentCalc) {
+      calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
+      renderExamples(currentCalc.examples || []);
+    }
+  }
 
   function selectCalc(c) {
     currentCalc = c;
-    // Update active pill
     var pills = selectorScroll.querySelectorAll(".calc-pill");
-    pills.forEach(function(p) {
-      p.classList.toggle("active", p.getAttribute("data-id") === c.id);
-    });
-    // Update description
-    calcDescription.textContent = c.desc;
-    // Update examples
-    renderExamples(c.examples);
-    // Clear output
+    for (var i = 0; i < pills.length; i++) {
+      if (pills[i].getAttribute("data-id") === c.id) {
+        pills[i].className = "calc-pill active";
+      } else {
+        pills[i].className = "calc-pill";
+      }
+    }
+    calcDescription.textContent = t(c.id + "_desc", c.desc);
+    renderExamples(c.examples || []);
     outputSection.classList.remove("visible");
     outputContent.innerHTML = "";
-    // Focus input
     exprInput.value = "";
     exprInput.focus();
   }
 
   function renderExamples(examples) {
     examplesRow.innerHTML = "";
-    examples.forEach(function(ex) {
-      var chip = document.createElement("button");
-      chip.className = "example-chip";
-      chip.textContent = ex;
-      chip.addEventListener("click", function() {
-        exprInput.value = ex;
-        doCalculate();
-      });
-      examplesRow.appendChild(chip);
-    });
+    for (var i = 0; i < examples.length; i++) {
+      (function(ex) {
+        var chip = document.createElement("button");
+        chip.className = "example-chip";
+        chip.textContent = ex;
+        chip.addEventListener("click", function() {
+          exprInput.value = ex;
+          doCalculate();
+        });
+        examplesRow.appendChild(chip);
+      })(examples[i]);
+    }
   }
 
+  /* ============================================================
+   * CALCULATE
+   * ============================================================ */
   function setLoading(on) {
-    calcBtn.classList.toggle("loading", on);
+    if (on) {
+      calcBtn.className = "btn-calc loading";
+    } else {
+      calcBtn.className = "btn-calc";
+    }
   }
 
   function renderKatex(el, tex) {
@@ -512,32 +923,27 @@ footer span {
     outputContent.innerHTML =
       '<div class="output-cards">' +
         '<div class="output-card input-card">' +
-          '<div class="label">Input</div>' +
-          '<div class="katex-render" id="katexInput"></div>' +
+          '<div class="label">' + escapeHtml(t("input_label")) + '</div>' +
+          '<div class="katex-container"><div class="katex-render" id="katexInput"></div></div>' +
         '</div>' +
         '<div class="output-card result-card">' +
-          '<div class="label">Result</div>' +
-          '<div class="katex-render" id="katexResult"></div>' +
+          '<div class="label">' + escapeHtml(t("result_label")) + '</div>' +
+          '<div class="katex-container"><div class="katex-render" id="katexResult"></div></div>' +
         '</div>' +
       '</div>';
     renderKatex(document.getElementById("katexInput"), inputTex);
     renderKatex(document.getElementById("katexResult"), outputTex);
     outputSection.classList.add("visible");
+    setTimeout(scaleKatexContainers, 0);
   }
 
   function showError(msg) {
     outputContent.innerHTML =
       '<div class="error-card">' +
-        '<div class="label">Error</div>' +
+        '<div class="label">' + escapeHtml(t("error_label")) + '</div>' +
         '<div>' + escapeHtml(msg) + '</div>' +
       '</div>';
     outputSection.classList.add("visible");
-  }
-
-  function escapeHtml(s) {
-    var d = document.createElement("div");
-    d.textContent = s;
-    return d.innerHTML;
   }
 
   function doCalculate() {
@@ -561,13 +967,43 @@ footer span {
         showResult(data.input_tex || "", data.output_tex || "");
       }
     })
-    .catch(function(err) {
+    ["catch"](function(err) {
       setLoading(false);
-      showError("Connection error: " + err.message);
+      showError(t("conn_error") + err.message);
     });
   }
 
-  // Events
+  /* ============================================================
+   * KATEX AUTO-SCALING
+   * ============================================================ */
+  function scaleKatexContainers() {
+    var containers = document.querySelectorAll(".katex-container");
+    for (var i = 0; i < containers.length; i++) {
+      var container = containers[i];
+      container.style.transform = "";
+      container.style.height = "";
+
+      var scrollW = container.scrollWidth;
+      var clientW = container.clientWidth;
+      if (scrollW > clientW + 1 && clientW > 0) {
+        var ratio = clientW / scrollW;
+        if (ratio < 0.5) ratio = 0.5;
+        container.style.transformOrigin = "left center";
+        container.style.transform = "scale(" + ratio + ")";
+        container.style.height = (container.scrollHeight * ratio) + "px";
+      }
+    }
+  }
+
+  var resizeTimer;
+  window.addEventListener("resize", function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(scaleKatexContainers, 150);
+  });
+
+  /* ============================================================
+   * EVENTS
+   * ============================================================ */
   calcBtn.addEventListener("click", doCalculate);
   exprInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
@@ -576,8 +1012,42 @@ footer span {
     }
   });
 
-  // Initialize
-  selectCalc(CALCS[0]);
+  /* ============================================================
+   * INIT
+   * ============================================================ */
+  buildLangMenu();
+  applyTranslations();
+
+  // Translate the description for the initially-selected calc
+  calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
+
+  // Wire up click handlers on the static HTML pills and example chips
+  // so the page is fully interactive without any DOM rebuild.
+  attachHandlers();
+
+  // Fetch calculators from API; update data only, never touch the DOM.
+  // The static HTML pills and examples stay as-is on initial load.
+  // DOM is only rebuilt on user interaction (pill click, language change).
+  fetch("/api/calculators")
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || !data.length) return;
+      calcs = [];
+      for (var i = 0; i < data.length; i++) {
+        var d = data[i];
+        calcs.push({
+          id: d.id || d.name,
+          name: d.name,
+          desc: d.short_desc || d.description,
+          examples: d.examples || []
+        });
+      }
+      currentCalc = calcs[0];
+    })
+    ["catch"](function() {
+      // API unavailable — static HTML stays as-is
+    });
+
 })();
 </script>
 

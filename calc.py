@@ -383,26 +383,27 @@ class Calculator7(Calculator6):
     def Value(self):
         next = self.PeekNextToken()
         if next == "(":
-            self.PopNextToken()
+            next = self.PopNextToken()
             result = self.Expr()
-            closing = self.PopNextToken()
-            if closing != ")":
-                raise Exception(f"Invalid token {closing}")
+            next = self.PopNextToken()
+            if next != ")":
+                raise Exception(f"Invalid token {next}")
         elif next is not None and next[0].isalpha():
-            name = self.PopNextToken()
+            next = self.PopNextToken()
             if self.PeekNextToken() == "(":
-                if name not in self.FUNCTIONS:
-                    raise Exception(f"Unknown function '{name}'")
-                self.PopNextToken()  # consume '('
-                arg = self.Expr()
-                closing = self.PopNextToken()
-                if closing != ")":
-                    raise Exception(f"Invalid token {closing}")
-                result = self.FUNCTIONS[name](arg)
+                if next not in self.FUNCTIONS:
+                    raise Exception(f"Unknown function '{next}'")
+                func = self.FUNCTIONS[next]
+                next = self.PopNextToken()
+                result = self.Expr()
+                next = self.PopNextToken()
+                if next != ")":
+                    raise Exception(f"Invalid token {next}")
+                result = func(result)
             else:
-                if name not in self.CONSTANTS:
-                    raise Exception(f"Unknown constant '{name}'")
-                result = self.CONSTANTS[name]
+                if next not in self.CONSTANTS:
+                    raise Exception(f"Unknown constant '{next}'")
+                result = self.CONSTANTS[next]
         else:
             next = self.PopNextToken()
             if next is None:
@@ -877,6 +878,12 @@ class Calculator8(Calculator7):
 
 
 def calc8(expression):
+    '''
+    Extends calc7 to support single-variable algebra and equation solving.
+    Without '=': simplify expression (eg. 2*x+3*x -> 5*x)
+    With '=': solve equation (eg. x^2=1 -> x=-1; x=1)
+    Supports linear, quadratic, and cubic equations.
+    '''
     if '=' in expression:
         sides = expression.split('=')
         if len(sides) != 2:
@@ -1343,6 +1350,12 @@ def _promote_to_multi_poly(value):
 
 
 def calc9(expression):
+    '''
+    Extends calc8 to support multi-variable linear algebra.
+    Multiple equations separated by ';' are solved as a system.
+    eg. x+y=2; x-y=0 -> x=1; y=1
+    Supports up to 3 variables.
+    '''
     if ';' in expression:
         equation_strs = [s.strip() for s in expression.split(';')]
         all_equations = []
@@ -1479,10 +1492,12 @@ def test(expression, expected, op = calc, exception = None):
                 print(f"❌ Testing {expression}, expected {expected}, result {result}")
 
 if __name__ == '__main__':
+    # calc: add and subtract
     test("1+2+3", "6", calc)
     test("123+456 - 789", "-210", calc)
     test("123-456", "-333", calc)
 
+    # calc2: add multiply and divide
     test("1+2+3", "6", calc2)
     test("123+456 - 789", "-210", calc2)
     test("123-456", "-333", calc2)
@@ -1492,6 +1507,7 @@ if __name__ == '__main__':
     test("1+2*3-5/4", "5.75", calc2)
     test("1*2*3*4*5/6", "20.0", calc2)
 
+    # calc3: recursive descent parser with parentheses and exponents
     test("1+2+3", "6", calc3)
     test("123+456 - 789", "-210", calc3)
     test("123-456", "-333", calc3)
@@ -1505,6 +1521,7 @@ if __name__ == '__main__':
     test("1**2", "", calc3, Exception())
     test("", "", calc3, Exception())
 
+    # calc4: scientific notation and decimals
     test("1+2+3", "6", calc4)
     test("1+2*3-4", "3", calc4)
     test("1e2", "100.0", calc4)
@@ -1517,6 +1534,7 @@ if __name__ == '__main__':
     test("1.5e3/1.5e2", "10.0", calc4)
     test("", "", calc4, Exception())
 
+    # calc5: named constants (pi, e)
     test("pi", "3.141592653589793", calc5)
     test("e", "2.718281828459045", calc5)
     test("2*pi", "6.283185307179586", calc5)
@@ -1526,6 +1544,7 @@ if __name__ == '__main__':
     test("1+2", "3", calc5)
     test("foo", "", calc5, Exception())
 
+    # calc6: imaginary unit and complex numbers
     test("i", "i", calc6)
     test("i*i", "-1", calc6)
     test("i^2", "-1", calc6)
@@ -1538,6 +1557,7 @@ if __name__ == '__main__':
     test("e^(i*pi)", "-1", calc6)
     test("1+2", "3", calc6)
 
+    # calc7: math functions (sin, cos, tan, exp, ln, log, sqrt, abs, etc.)
     test("sin(0)", "0", calc7)
     test("cos(0)", "1", calc7)
     test("sin(pi/2)", "1", calc7)
@@ -1614,27 +1634,27 @@ if __name__ == '__main__':
     test("x^3+1=0", "x=-1; x=0.5-0.866025403784439i; x=0.5+0.866025403784439i", calc8)
     test("x^3-x=0", "x=-1; x=0; x=1", calc8)  # x(x^2-1) = x(x-1)(x+1)
 
-    # calc9 single-variable (should work same as calc8)
+    # calc9: single-variable (same as calc8)
     test("2*x+3*x", "5*x", calc9)
     test("2*x=4", "x=2", calc9)
     test("x^2=1", "x=-1; x=1", calc9)
     test("x^3-6*x^2+11*x-6=0", "x=1; x=2; x=3", calc9)
     test("2+3", "5", calc9)
 
-    # Multi-variable simplification
+    # calc9: multi-variable simplification
     test("x+y+x", "2*x+y", calc9)
     test("3*x+2*y-x", "2*x+2*y", calc9)
     test("x+y-x-y", "0", calc9)
     test("2*x+3*y+x-y", "3*x+2*y", calc9)
 
-    # Two-variable linear systems
+    # calc9: two-variable linear systems
     test("x+y=2; x-y=0", "x=1; y=1", calc9)
     test("2*x+3*y=7; x-y=1", "x=2; y=1", calc9)
     test("x+y=10; 2*x+y=15", "x=5; y=5", calc9)
     test("x+2*y=5; 3*x-y=1", "x=1; y=2", calc9)
     test("x=3; x+y=5", "x=3; y=2", calc9)
 
-    # Three-variable linear systems
+    # calc9: three-variable linear systems
     test("x+y+z=6; x-y=0; x+z=4", "x=2; y=2; z=2", calc9)
     test("x+y+z=3; x+y-z=1; x-y+z=1", "x=1; y=1; z=1", calc9)
     test("x+y+z=10; x-y+z=4; x+y-z=2", "x=3; y=3; z=4", calc9)

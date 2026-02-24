@@ -107,6 +107,15 @@ class Polynomial:
         if isinstance(other, (int, float, complex)):
             if other == 0:
                 raise Exception("Division by zero")
+            if isinstance(other, int):
+                from fractions import Fraction as _Frac
+                new_coeffs = []
+                for c in self.coeffs:
+                    if isinstance(c, (int, _Frac)):
+                        new_coeffs.append(_Frac(c, other))
+                    else:
+                        new_coeffs.append(c / other)
+                return Polynomial(new_coeffs, var=self.var)
             return Polynomial([c / other for c in self.coeffs], var=self.var)
         return NotImplemented
 
@@ -117,6 +126,9 @@ class Polynomial:
         if val == 0:
             raise Exception("Division by zero")
         if isinstance(other, (int, float, complex)):
+            from fractions import Fraction as _Frac
+            if isinstance(other, (int, _Frac)) and isinstance(val, (int, _Frac)):
+                return Polynomial([_Frac(other) / _Frac(val)], var=self.var)
             return Polynomial([other / val], var=self.var)
         return NotImplemented
 
@@ -479,7 +491,7 @@ class Calculator12(Calculator11):
           short_desc="Algebra & Equations", group="solver",
           examples=["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"],
           i18n={"zh": "\u4ee3\u6570\u4e0e\u65b9\u7a0b", "hi": "\u092c\u0940\u091c\u0917\u0923\u093f\u0924 \u0914\u0930 \u0938\u092e\u0940\u0915\u0930\u0923", "es": "\u00c1lgebra y Ecuaciones", "fr": "Alg\u00e8bre et \u00c9quations", "ar": "\u0627\u0644\u062c\u0628\u0631 \u0648\u0627\u0644\u0645\u0639\u0627\u062f\u0644\u0627\u062a", "pt": "\u00c1lgebra e Equa\u00e7\u00f5es", "ru": "\u0410\u043b\u0433\u0435\u0431\u0440\u0430 \u0438 \u0443\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u044f", "ja": "\u4ee3\u6570\u3068\u65b9\u7a0b\u5f0f", "de": "Algebra und Gleichungen"})
-def calc12(expression, symbolic=False):
+def calc12(expression):
     '''
     Extends calc7 to support single-variable algebra and equation solving.
     Without '=': simplify expression (eg. 2*x+3*x -> 5*x)
@@ -492,11 +504,11 @@ def calc12(expression, symbolic=False):
             raise Exception("Only one '=' sign allowed")
         left_expr, right_expr = sides
 
-        calc_left = Calculator12(left_expr, symbolic=symbolic)
+        calc_left = Calculator12(left_expr)
         left = calc_left.Parse()
         var_left = calc_left._var_name
 
-        calc_right = Calculator12(right_expr, symbolic=symbolic)
+        calc_right = Calculator12(right_expr)
         right = calc_right.Parse()
         var_right = calc_right._var_name
 
@@ -524,7 +536,7 @@ def calc12(expression, symbolic=False):
             parts.append(f"{var}={_format_solution(sol)}")
         return '; '.join(parts)
     else:
-        calculator = Calculator12(expression, symbolic=symbolic)
+        calculator = Calculator12(expression)
         result = calculator.Parse()
         if isinstance(result, Matrix):
             return _format_matrix_result(result)

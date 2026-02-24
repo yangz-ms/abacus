@@ -396,7 +396,7 @@ def _detect_abs_inequality(expression):
     return None
 
 
-def solve_inequality(expression, symbolic=False):
+def solve_inequality(expression):
     """Solve an inequality expression. Returns interval notation string."""
     expression = expression.strip()
 
@@ -467,9 +467,8 @@ def solve_inequality(expression, symbolic=False):
 class Calculator15(Calculator14):
     """Inequalities."""
 
-    def __init__(self, expression, symbolic=False):
+    def __init__(self, expression):
         # Add comparison operator tokens to the tokenizer
-        self.symbolic = symbolic
         self.exp = []
         self.idx = 0
         self._var_names = set()
@@ -535,15 +534,15 @@ class Calculator15(Calculator14):
           short_desc="Inequalities", group="solver",
           examples=["2*x+3>7", "x^2-4<0", "abs(x-2)<=5"],
           i18n={"zh": "\u4e0d\u7b49\u5f0f", "hi": "\u0905\u0938\u092e\u093f\u0915\u093e\u090f\u0901", "es": "Desigualdades", "fr": "In\u00e9galit\u00e9s", "ar": "\u0627\u0644\u0645\u062a\u0628\u0627\u064a\u0646\u0627\u062a", "pt": "Desigualdades", "ru": "\u041d\u0435\u0440\u0430\u0432\u0435\u043d\u0441\u0442\u0432\u0430", "ja": "\u4e0d\u7b49\u5f0f", "de": "Ungleichungen"})
-def calc15(expression, symbolic=False):
+def calc15(expression):
     """Inequalities."""
     expression = expression.strip()
 
     # Check for inequality operators (at top level, not inside parens)
     ops = _find_inequality_op(expression)
     if ops:
-        return solve_inequality(expression, symbolic)
+        return solve_inequality(expression)
 
     # Delegate everything else to calc14 (which handles factor, divpoly, complsq,
     # binom, equations, systems with ;, and falls through to expressions)
-    return calc14(expression, symbolic=symbolic)
+    return calc14(expression)

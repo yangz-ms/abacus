@@ -15,7 +15,7 @@ if __name__ == '__main__':
     test("1*2*3", "6", calc2)
     test("123+456*789", "359907", calc2)
     test("1+2*3-4", "3", calc2)
-    test("1+2*3-5/4", "5.75", calc2)
+    test("1+2*3-5/4", "23/4", calc2)
     test("1*2*3*4*5/6", "20", calc2)
 
     # calc3: recursive descent parser with parentheses and exponents
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     test("1*2*3", "6", calc3)
     test("123+456*789", "359907", calc3)
     test("1+2*3-4", "3", calc3)
-    test("1+2*3-5/4", "5.75", calc3)
+    test("1+2*3-5/4", "23/4", calc3)
     test("1*2*3*4*5/6", "20", calc3)
     test("1+2*(3-4)", "-1", calc3)
     test("(3^5+2)/(7*7)", "5", calc3)

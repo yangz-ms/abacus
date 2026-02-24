@@ -1,7 +1,7 @@
 import re
 
 
-def input_to_tex(expression, calculator='calc1', symbolic=False):
+def input_to_tex(expression, calculator='calc1'):
     """Convert a calculator input expression string to LaTeX."""
     # Handle systems of equations (semicolon-separated)
     if ';' in expression:
@@ -463,7 +463,7 @@ def _is_pure_number(tok):
     return tok['type'] == 'number'
 
 
-def output_to_tex(result, calculator='calc1', symbolic=False):
+def output_to_tex(result, calculator='calc1'):
     """Convert calculator output to LaTeX."""
     result = result.strip()
     if not result:
@@ -501,6 +501,11 @@ def _output_value_to_tex(val):
         if 'e' in val or 'E' in val:
             return _format_sci_notation(val)
         return val
+
+    # Fraction: a/b (e.g. "10/3", "-5/7")
+    m = re.fullmatch(r'(-?\d+)/(\d+)', val)
+    if m:
+        return r'\frac{' + m.group(1) + '}{' + m.group(2) + '}'
 
     # Complex number patterns
     # Pure imaginary: "i", "-i", "3i", "-3i", "0.5i"

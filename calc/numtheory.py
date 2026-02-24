@@ -1,5 +1,6 @@
 import math
 import cmath
+from fractions import Fraction
 from functools import reduce
 
 from calc.core import Calculator7, format_complex
@@ -70,8 +71,7 @@ class Calculator8(Calculator7):
         'factor': lambda x: _format_factors(_prime_factors(x)),
     }
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         self.idx = 0
         i = 0
@@ -181,7 +181,10 @@ class Calculator8(Calculator7):
             if next == "*":
                 result *= nextResult
             elif next == "/":
-                result /= nextResult
+                if isinstance(result, (int, Fraction)) and isinstance(nextResult, (int, Fraction)):
+                    result = Fraction(result) / Fraction(nextResult)
+                else:
+                    result /= nextResult
             elif next == "%":
                 result = int(result) % int(nextResult)
             next = self.PeekNextToken()
@@ -192,9 +195,9 @@ class Calculator8(Calculator7):
           short_desc="Number Theory", group="expression",
           examples=["gcd(12,8)", "5!", "factor(60)", "17%3", "floor(3.7)"],
           i18n={"zh": "\u6570\u8bba", "hi": "\u0938\u0902\u0916\u094d\u092f\u093e \u0938\u093f\u0926\u094d\u0927\u093e\u0902\u0924", "es": "Teor\u00eda de N\u00fameros", "fr": "Th\u00e9orie des Nombres", "ar": "\u0646\u0638\u0631\u064a\u0629 \u0627\u0644\u0623\u0639\u062f\u0627\u062f", "pt": "Teoria dos N\u00fameros", "ru": "\u0422\u0435\u043e\u0440\u0438\u044f \u0447\u0438\u0441\u0435\u043b", "ja": "\u6570\u8ad6", "de": "Zahlentheorie"})
-def calc8(expression, symbolic=False):
+def calc8(expression):
     """Number theory: gcd, lcm, factorial, modulo, prime factorization, rounding."""
-    calculator = Calculator8(expression, symbolic=symbolic)
+    calculator = Calculator8(expression)
     result = calculator.Parse()
     if isinstance(result, str):
         return result
@@ -237,9 +240,9 @@ class Calculator9(Calculator8):
           short_desc="Combinatorics", group="expression",
           examples=["C(10,3)", "P(5,2)", "C(52,5)"],
           i18n={"zh": "\u7ec4\u5408\u6570\u5b66", "hi": "\u0938\u0902\u092f\u094b\u091c\u0928", "es": "Combinatoria", "fr": "Combinatoire", "ar": "\u0627\u0644\u062a\u0648\u0627\u0641\u064a\u0642", "pt": "Combinat\u00f3ria", "ru": "\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0442\u043e\u0440\u0438\u043a\u0430", "ja": "\u7d44\u5408\u305b", "de": "Kombinatorik"})
-def calc9(expression, symbolic=False):
+def calc9(expression):
     """Combinatorics: permutations and combinations."""
-    calculator = Calculator9(expression, symbolic=symbolic)
+    calculator = Calculator9(expression)
     result = calculator.Parse()
     if isinstance(result, str):
         return result
@@ -265,8 +268,7 @@ class Calculator10(Calculator9):
         'cot': lambda x: cmath.cos(x) / cmath.sin(x),
     }
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         self.idx = 0
         i = 0
@@ -359,9 +361,9 @@ class Calculator10(Calculator9):
           short_desc="Trig & Logs", group="expression",
           examples=["sin(90d)", "sec(pi/4)", "logb(2,8)", "polar(3,4)"],
           i18n={"zh": "\u4e09\u89d2\u4e0e\u5bf9\u6570", "hi": "\u0924\u094d\u0930\u093f\u0915\u094b\u0923\u092e\u093f\u0924\u093f \u0914\u0930 \u0932\u0949\u0917", "es": "Trig y Logs", "fr": "Trigo et Logs", "ar": "\u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062b\u0644\u062b\u0627\u062a", "pt": "Trig e Logs", "ru": "\u0422\u0440\u0438\u0433. \u0438 \u043b\u043e\u0433.", "ja": "\u4e09\u89d2\u3068\u5bfe\u6570", "de": "Trig. und Log."})
-def calc10(expression, symbolic=False):
+def calc10(expression):
     """Extended trig, arbitrary-base log, coordinate conversion."""
-    calculator = Calculator10(expression, symbolic=symbolic)
+    calculator = Calculator10(expression)
     result = calculator.Parse()
     if isinstance(result, str):
         return result

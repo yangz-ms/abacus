@@ -153,23 +153,21 @@ test('calc8: gcd(5!,4!) = 24',
      lambda: calc8("gcd(5!,4!)"), "24")
 
 # =========================================================================
-# 3. Symbolic Mode
+# 3. Fraction Default Mode
 # =========================================================================
 print()
 print("=" * 60)
-print("SYMBOLIC MODE TESTS")
+print("FRACTION DEFAULT MODE TESTS")
 print("=" * 60)
 
-test('calc3("1/3", symbolic=True) = "1/3"',
-     lambda: calc3("1/3", symbolic=True), "1/3")
-test('calc3("1/3", symbolic=False) = "0.3333..."',
-     lambda: calc3("1/3", symbolic=False), "0.3333333333333333")
-test('calc7("sin(pi/6)", symbolic=True) = "0.5"',
-     lambda: calc7("sin(pi/6)", symbolic=True), "0.5")
-test('calc12("x+1=0", symbolic=True) = "x=-1"',
-     lambda: calc12("x+1=0", symbolic=True), "x=-1")
-test('calc12("x+1=0", symbolic=False) = "x=-1"',
-     lambda: calc12("x+1=0", symbolic=False), "x=-1")
+test('calc3("1/3") = "1/3"',
+     lambda: calc3("1/3"), "1/3")
+test('calc3("10/3") = "10/3"',
+     lambda: calc3("10/3"), "10/3")
+test('calc7("sin(pi/6)") = "0.5"',
+     lambda: calc7("sin(pi/6)"), "0.5")
+test('calc12("x+1=0") = "x=-1"',
+     lambda: calc12("x+1=0"), "x=-1")
 
 # =========================================================================
 # 4. Performance

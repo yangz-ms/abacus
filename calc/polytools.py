@@ -540,10 +540,6 @@ class Calculator14(Calculator13):
     """Polynomial tools: factor, long division, completing the square,
     binomial expansion, higher-degree solving."""
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
-        super().__init__(expression)
-
 
 # ---------------------------------------------------------------------------
 # calc14() entry function
@@ -553,7 +549,7 @@ class Calculator14(Calculator13):
           short_desc="Poly Tools", group="solver",
           examples=["factor(x^2-5*x+6)", "divpoly(x^3-1,x-1)", "complsq(x^2+6*x+5)", "binom(x+2,5)", "x^4-1=0"],
           i18n={"zh": "\u591a\u9879\u5f0f\u5de5\u5177", "hi": "\u092c\u0939\u0941\u092a\u0926 \u0909\u092a\u0915\u0930\u0923", "es": "Herr. Polinomios", "fr": "Outils Polyn\u00f4mes", "ar": "\u0623\u062f\u0648\u0627\u062a \u0643\u062b\u064a\u0631\u0627\u062a \u0627\u0644\u062d\u062f\u0648\u062f", "pt": "Ferr. Polin\u00f4mios", "ru": "\u041f\u043e\u043b\u0438\u043d\u043e\u043c\u044b", "ja": "\u591a\u9805\u5f0f\u30c4\u30fc\u30eb", "de": "Polynom-Werkzeuge"})
-def calc14(expression, symbolic=False):
+def calc14(expression):
     """Polynomial tools: factor, long division, completing the square,
     binomial expansion, higher-degree equation solving."""
 
@@ -561,7 +557,7 @@ def calc14(expression, symbolic=False):
 
     # Delegate semicolon systems to calc13
     if ';' in expression:
-        return calc13(expression, symbolic=symbolic)
+        return calc13(expression)
 
     # Handle special function calls: factor(...), divpoly(...), complsq(...), binom(...)
     if expr.startswith("factor(") and expr.endswith(")"):
@@ -602,10 +598,10 @@ def calc14(expression, symbolic=False):
 
     # Handle equations with '='
     if '=' in expr:
-        return _solve_equation(expr, symbolic)
+        return _solve_equation(expr)
 
     # Otherwise simplify
-    calculator = Calculator14(expr, symbolic=symbolic)
+    calculator = Calculator14(expr)
     result = calculator.Parse()
     if isinstance(result, Matrix):
         return _format_matrix_result(result)
@@ -639,17 +635,17 @@ def _split_args(s):
     return parts
 
 
-def _solve_equation(expression, symbolic=False):
+def _solve_equation(expression):
     """Solve an equation, using Durand-Kerner for degree > 3."""
     sides = expression.split('=')
     if len(sides) != 2:
         raise Exception("Only one '=' sign allowed")
     left_expr, right_expr = sides
 
-    calc_left = Calculator14(left_expr, symbolic=symbolic)
+    calc_left = Calculator14(left_expr)
     left = calc_left.Parse()
 
-    calc_right = Calculator14(right_expr, symbolic=symbolic)
+    calc_right = Calculator14(right_expr)
     right = calc_right.Parse()
 
     var = calc_left._var_name or calc_right._var_name or 'x'

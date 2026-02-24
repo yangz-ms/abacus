@@ -264,8 +264,7 @@ class Calculator11(Calculator10):
     MATRIX_FUNCTIONS = {'det', 'inv', 'trans', 'trace', 'rref'}
     VECTOR_FUNCTIONS = {'dot', 'cross'}
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         self.idx = 0
         i = 0
@@ -476,7 +475,7 @@ class Calculator11(Calculator10):
                 if isinstance(result, Matrix) and isinstance(right, (int, float, complex)):
                     result = result / right
                 else:
-                    if self.symbolic and isinstance(result, (int, fractions.Fraction)) and isinstance(right, (int, fractions.Fraction)):
+                    if isinstance(result, (int, fractions.Fraction)) and isinstance(right, (int, fractions.Fraction)):
                         result = fractions.Fraction(result) / fractions.Fraction(right)
                     else:
                         result = result / right
@@ -540,9 +539,9 @@ def _format_scalar(x):
           short_desc="Matrices", group="expression",
           examples=["det([[1,2],[3,4]])", "inv([[2,1],[1,1]])", "dot([1,2,3],[4,5,6])", "[[1,2],[3,4]]*[[5,6],[7,8]]"],
           i18n={"zh": "\u77e9\u9635\u8fd0\u7b97", "hi": "\u0906\u0935\u094d\u092f\u0942\u0939", "es": "Matrices", "fr": "Matrices", "ar": "\u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0627\u062a", "pt": "Matrizes", "ru": "\u041c\u0430\u0442\u0440\u0438\u0446\u044b", "ja": "\u884c\u5217", "de": "Matrizen"})
-def calc11(expression, symbolic=False):
+def calc11(expression):
     """Matrices and vectors."""
-    calculator = Calculator11(expression, symbolic=symbolic)
+    calculator = Calculator11(expression)
     result = calculator.Parse()
     if isinstance(result, (int, float, complex)) and not isinstance(result, bool):
         return format_complex(result)

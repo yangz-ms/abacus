@@ -5,6 +5,11 @@ from calc.core import format_complex
 
 
 def _to_int(value):
+    from fractions import Fraction
+    if isinstance(value, Fraction):
+        if value.denominator == 1:
+            return value.numerator
+        return value
     if isinstance(value, complex):
         if value.imag == 0:
             value = value.real
@@ -19,6 +24,11 @@ def _to_int(value):
     return value
 
 def _fmt_num(x):
+    from fractions import Fraction
+    if isinstance(x, Fraction):
+        if x.denominator == 1:
+            return str(x.numerator)
+        return f"{x.numerator}/{x.denominator}"
     x = _to_int(x)
     if isinstance(x, complex):
         return format_complex(x)
@@ -90,6 +100,11 @@ def _sort_roots(roots):
     return real_roots + complex_roots
 
 def _format_solution(value):
+    from fractions import Fraction
+    if isinstance(value, Fraction):
+        if value.denominator == 1:
+            return str(value.numerator)
+        return f"{value.numerator}/{value.denominator}"
     value = _to_int(value)
     if isinstance(value, complex):
         return format_complex(value)

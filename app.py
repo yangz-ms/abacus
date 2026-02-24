@@ -27,7 +27,6 @@ CALCULATORS = get_registry()
 class CalculateRequest(BaseModel):
     calculator: str
     expression: str
-    symbolic: bool = False
 
 
 class CalculateResponse(BaseModel):
@@ -54,9 +53,9 @@ async def calculate(request: CalculateRequest):
     try:
         func = CALCULATORS[request.calculator]["function"]
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, lambda: func(request.expression, symbolic=request.symbolic))
-        tex_input = input_to_tex(request.expression, request.calculator, symbolic=request.symbolic)
-        tex_output = output_to_tex(result, request.calculator, symbolic=request.symbolic)
+        result = await loop.run_in_executor(None, lambda: func(request.expression))
+        tex_input = input_to_tex(request.expression, request.calculator)
+        tex_output = output_to_tex(result, request.calculator)
         return CalculateResponse(
             calculator=request.calculator,
             expression=request.expression,

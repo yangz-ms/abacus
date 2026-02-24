@@ -268,10 +268,10 @@ class Calculator13(Calculator12):
     _var_names = None
     _multi_mode = False
 
-    def __init__(self, expression, symbolic=False):
+    def __init__(self, expression):
         self._var_names = set()
         self._multi_mode = False
-        super().__init__(expression, symbolic=symbolic)
+        super().__init__(expression)
 
     def _promote_to_multi(self, value):
         if isinstance(value, MultiPolynomial):
@@ -517,7 +517,7 @@ def _promote_to_multi_poly(value):
           short_desc="Linear Systems", group="solver",
           examples=["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"],
           i18n={"zh": "\u7ebf\u6027\u65b9\u7a0b\u7ec4", "hi": "\u0930\u0948\u0916\u093f\u0915 \u0938\u092e\u0940\u0915\u0930\u0923 \u0928\u093f\u0915\u093e\u092f", "es": "Sistemas Lineales", "fr": "Syst\u00e8mes Lin\u00e9aires", "ar": "\u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u062e\u0637\u064a\u0629", "pt": "Sistemas Lineares", "ru": "\u041b\u0438\u043d\u0435\u0439\u043d\u044b\u0435 \u0441\u0438\u0441\u0442\u0435\u043c\u044b", "ja": "\u9023\u7acb\u4e00\u6b21\u65b9\u7a0b\u5f0f", "de": "Lineare Systeme"})
-def calc13(expression, symbolic=False):
+def calc13(expression):
     '''
     Extends calc12 to support multi-variable linear algebra.
     Multiple equations separated by ';' are solved as a system.
@@ -536,9 +536,9 @@ def calc13(expression, symbolic=False):
                 raise Exception("Only one '=' sign allowed per equation")
             left_str, right_str = sides
 
-            calc_left = Calculator13(left_str, symbolic=symbolic)
+            calc_left = Calculator13(left_str)
             left = calc_left.Parse()
-            calc_right = Calculator13(right_str, symbolic=symbolic)
+            calc_right = Calculator13(right_str)
             right = calc_right.Parse()
 
             for c in [calc_left, calc_right]:
@@ -563,12 +563,12 @@ def calc13(expression, symbolic=False):
             raise Exception("Only one '=' sign allowed")
         left_expr, right_expr = sides
 
-        calc_left = Calculator13(left_expr, symbolic=symbolic)
+        calc_left = Calculator13(left_expr)
         left = calc_left.Parse()
         var_left = calc_left._var_name
         vars_left = calc_left._var_names
 
-        calc_right = Calculator13(right_expr, symbolic=symbolic)
+        calc_right = Calculator13(right_expr)
         right = calc_right.Parse()
         var_right = calc_right._var_name
         vars_right = calc_right._var_names
@@ -624,7 +624,7 @@ def calc13(expression, symbolic=False):
                 parts.append(f"{var}={_format_solution(solution[var])}")
             return '; '.join(parts)
     else:
-        calculator = Calculator13(expression, symbolic=symbolic)
+        calculator = Calculator13(expression)
         result = calculator.Parse()
         if isinstance(result, Matrix):
             return _format_matrix_result(result)

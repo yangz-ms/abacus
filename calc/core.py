@@ -10,7 +10,7 @@ from calc.registry import register
           short_desc="Add & Subtract", group="expression",
           examples=["1+2+3", "123-456", "123+456-789"],
           i18n={"zh": "\u52a0\u51cf\u8fd0\u7b97", "hi": "\u091c\u094b\u0921\u093c \u0914\u0930 \u0918\u091f\u093e\u0935", "es": "Suma y Resta", "fr": "Addition et Soustraction", "ar": "\u0627\u0644\u062c\u0645\u0639 \u0648\u0627\u0644\u0637\u0631\u062d", "pt": "Adi\u00e7\u00e3o e Subtra\u00e7\u00e3o", "ru": "\u0421\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u0438 \u0432\u044b\u0447\u0438\u0442\u0430\u043d\u0438\u0435", "ja": "\u52a0\u6e1b\u7b97", "de": "Addition und Subtraktion"})
-def calc1(expression, symbolic=False):
+def calc1(expression):
     '''Evaluate addition and subtraction of integers.'''
     result = 0
     op = '+'
@@ -35,7 +35,7 @@ def calc1(expression, symbolic=False):
           short_desc="Multiply & Divide", group="expression",
           examples=["1+2*3-4", "123+456*789", "1*2*3*4*5/6"],
           i18n={"zh": "\u56db\u5219\u8fd0\u7b97", "hi": "\u0917\u0941\u0923\u093e \u0914\u0930 \u092d\u093e\u0917", "es": "Multiplicar y Dividir", "fr": "Multiplication et Division", "ar": "\u0627\u0644\u0636\u0631\u0628 \u0648\u0627\u0644\u0642\u0633\u0645\u0629", "pt": "Multiplica\u00e7\u00e3o e Divis\u00e3o", "ru": "\u0423\u043c\u043d\u043e\u0436\u0435\u043d\u0438\u0435 \u0438 \u0434\u0435\u043b\u0435\u043d\u0438\u0435", "ja": "\u56db\u5247\u6f14\u7b97", "de": "Multiplikation und Division"})
-def calc2(expression, symbolic=False):
+def calc2(expression):
     '''Evaluate addition, subtraction, multiplication, and division with operator precedence.'''
     result = 0
     result2 = 0
@@ -56,7 +56,10 @@ def calc2(expression, symbolic=False):
             elif op == '*':
                 result2 *= current
             elif op == '/':
-                result2 /= current
+                if isinstance(result2, (int, Fraction)) and isinstance(current, (int, Fraction)):
+                    result2 = Fraction(result2, current)
+                else:
+                    result2 /= current
             current = 0
             op = c
         elif c != ' ':
@@ -68,8 +71,7 @@ class Calculator3:
     exp = None
     idx = 0
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         current = ""
         for c in expression:
@@ -141,7 +143,7 @@ class Calculator3:
             if next == "*":
                 result *= nextResult
             elif next == "/":
-                if self.symbolic and isinstance(result, (int, fractions.Fraction)) and isinstance(nextResult, (int, fractions.Fraction)):
+                if isinstance(result, (int, fractions.Fraction)) and isinstance(nextResult, (int, fractions.Fraction)):
                     result = fractions.Fraction(result) / fractions.Fraction(nextResult)
                 else:
                     result /= nextResult
@@ -176,7 +178,7 @@ def _format_result(value):
           short_desc="Parentheses & Exponents", group="expression",
           examples=["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"],
           i18n={"zh": "\u62ec\u53f7\u4e0e\u5e42", "hi": "\u0915\u094b\u0937\u094d\u0920\u0915 \u0914\u0930 \u0918\u093e\u0924\u093e\u0902\u0915", "es": "Par\u00e9ntesis y Exponentes", "fr": "Parenth\u00e8ses et Exposants", "ar": "\u0627\u0644\u0623\u0642\u0648\u0627\u0633 \u0648\u0627\u0644\u0623\u064f\u0633\u064f\u0633", "pt": "Par\u00eanteses e Expoentes", "ru": "\u0421\u043a\u043e\u0431\u043a\u0438 \u0438 \u0441\u0442\u0435\u043f\u0435\u043d\u0438", "ja": "\u62ec\u5f27\u3068\u7d2f\u4e57", "de": "Klammern und Exponenten"})
-def calc3(expression, symbolic=False):
+def calc3(expression):
     '''
     Use the following grammar
     Expr    <- Sum
@@ -186,12 +188,11 @@ def calc3(expression, symbolic=False):
     Value   <- [0-9]+ / '(' Expr ')'
     '''
 
-    calculator = Calculator3(expression, symbolic=symbolic)
+    calculator = Calculator3(expression)
     return _format_result(calculator.Parse())
 
 class Calculator4(Calculator3):
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         self.idx = 0
         i = 0
@@ -247,7 +248,7 @@ class Calculator4(Calculator3):
           short_desc="Scientific Notation", group="expression",
           examples=["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"],
           i18n={"zh": "\u79d1\u5b66\u8ba1\u6570\u6cd5", "hi": "\u0935\u0948\u091c\u094d\u091e\u093e\u0928\u093f\u0915 \u0938\u0902\u0915\u0947\u0924\u0928", "es": "Notaci\u00f3n Cient\u00edfica", "fr": "Notation Scientifique", "ar": "\u0627\u0644\u062a\u0631\u0645\u064a\u0632 \u0627\u0644\u0639\u0644\u0645\u064a", "pt": "Nota\u00e7\u00e3o Cient\u00edfica", "ru": "\u041d\u0430\u0443\u0447\u043d\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c", "ja": "\u79d1\u5b66\u8868\u8a18\u6cd5", "de": "Wissenschaftliche Notation"})
-def calc4(expression, symbolic=False):
+def calc4(expression):
     '''
     Extends calc3 to support scientific notation and decimals.
     Use the following grammar:
@@ -258,7 +259,7 @@ def calc4(expression, symbolic=False):
     Value   <- Number / '(' Expr ')'
     Number  <- [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
     '''
-    calculator = Calculator4(expression, symbolic=symbolic)
+    calculator = Calculator4(expression)
     return _format_result(calculator.Parse())
 
 
@@ -269,8 +270,7 @@ class Calculator5(Calculator4):
     }
     MULTI_FUNCTIONS = {}
 
-    def __init__(self, expression, symbolic=False):
-        self.symbolic = symbolic
+    def __init__(self, expression):
         self.exp = []
         self.idx = 0
         i = 0
@@ -340,7 +340,7 @@ class Calculator5(Calculator4):
           short_desc="Constants (pi, e)", group="expression",
           examples=["2*pi", "e^2", "pi+e"],
           i18n={"zh": "\u5e38\u91cf (\u03c0, e)", "hi": "\u0938\u094d\u0925\u093f\u0930\u093e\u0902\u0915 (\u03c0, e)", "es": "Constantes (\u03c0, e)", "fr": "Constantes (\u03c0, e)", "ar": "\u0627\u0644\u062b\u0648\u0627\u0628\u062a (\u03c0, e)", "pt": "Constantes (\u03c0, e)", "ru": "\u041a\u043e\u043d\u0441\u0442\u0430\u043d\u0442\u044b (\u03c0, e)", "ja": "\u5b9a\u6570 (\u03c0, e)", "de": "Konstanten (\u03c0, e)"})
-def calc5(expression, symbolic=False):
+def calc5(expression):
     '''
     Extends calc4 to support named constants (pi, e).
     Use the following grammar:
@@ -352,7 +352,7 @@ def calc5(expression, symbolic=False):
     Number  <- [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
     Constant <- 'pi' / 'e'
     '''
-    calculator = Calculator5(expression, symbolic=symbolic)
+    calculator = Calculator5(expression)
     return _format_result(calculator.Parse())
 
 
@@ -362,10 +362,16 @@ class Calculator6(Calculator5):
 
 def format_complex(value):
     def fmt_num(x):
+        if isinstance(x, fractions.Fraction):
+            if x.denominator == 1:
+                return str(x.numerator)
+            return f"{x.numerator}/{x.denominator}"
         if isinstance(x, float) and math.isfinite(x) and x == int(x):
             return str(int(x))
         return str(x)
 
+    if isinstance(value, fractions.Fraction):
+        return _format_result(value)
     if not isinstance(value, complex):
         return fmt_num(value)
 
@@ -394,7 +400,7 @@ def format_complex(value):
           short_desc="Complex Numbers", group="expression",
           examples=["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"],
           i18n={"zh": "\u590d\u6570\u8fd0\u7b97", "hi": "\u0938\u092e\u094d\u092e\u093f\u0936\u094d\u0930 \u0938\u0902\u0916\u094d\u092f\u093e\u090f\u0901", "es": "N\u00fameros Complejos", "fr": "Nombres Complexes", "ar": "\u0627\u0644\u0623\u0639\u062f\u0627\u062f \u0627\u0644\u0645\u0631\u0643\u0628\u0629", "pt": "N\u00fameros Complexos", "ru": "\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u043d\u044b\u0435 \u0447\u0438\u0441\u043b\u0430", "ja": "\u8907\u7d20\u6570", "de": "Komplexe Zahlen"})
-def calc6(expression, symbolic=False):
+def calc6(expression):
     '''
     Extends calc5 to support imaginary unit i and complex numbers.
     Use the following grammar:
@@ -406,7 +412,7 @@ def calc6(expression, symbolic=False):
     Number  <- [0-9]* ('.' [0-9]*)? (('e'/'E') ('+'/'-')? [0-9]+)?
     Constant <- 'pi' / 'e' / 'i'
     '''
-    calculator = Calculator6(expression, symbolic=symbolic)
+    calculator = Calculator6(expression)
     return format_complex(calculator.Parse())
 
 
@@ -486,7 +492,7 @@ class Calculator7(Calculator6):
           short_desc="Math Functions", group="expression",
           examples=["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"],
           i18n={"zh": "\u6570\u5b66\u51fd\u6570", "hi": "\u0917\u0923\u093f\u0924\u0940\u092f \u092b\u0932\u0928", "es": "Funciones Matem\u00e1ticas", "fr": "Fonctions Math\u00e9matiques", "ar": "\u0627\u0644\u062f\u0648\u0627\u0644 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629", "pt": "Fun\u00e7\u00f5es Matem\u00e1ticas", "ru": "\u041c\u0430\u0442\u0435\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0444\u0443\u043d\u043a\u0446\u0438\u0438", "ja": "\u6570\u5b66\u95a2\u6570", "de": "Mathematische Funktionen"})
-def calc7(expression, symbolic=False):
+def calc7(expression):
     '''
     Extends calc6 to support common math functions.
     Use the following grammar:
@@ -501,5 +507,5 @@ def calc7(expression, symbolic=False):
                'sinh' / 'cosh' / 'tanh' / 'exp' / 'ln' / 'log' /
                'sqrt' / 'abs'
     '''
-    calculator = Calculator7(expression, symbolic=symbolic)
+    calculator = Calculator7(expression)
     return format_complex(calculator.Parse())

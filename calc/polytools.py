@@ -5,9 +5,8 @@ from fractions import Fraction
 from calc.registry import register
 from calc.helpers import _to_int, _clean_root, _unique_roots, _sort_roots, _format_solution
 from calc.numtheory import _prime_factors, _format_factors
-from calc.matrix import Matrix, _format_matrix_result
 from calc.algebra import Polynomial
-from calc.systems import Calculator13, calc13, MultiPolynomial
+from calc.systems import Calculator14, calc14, MultiPolynomial
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +118,6 @@ class Radical:
         if other.is_rational():
             return self / other.a
         # Rationalize denominator: multiply by conjugate
-        # (a1+b1*sqrt(n)) / (a2+b2*sqrt(n)) = (a1+b1*sqrt(n))*(a2-b2*sqrt(n)) / (a2^2 - b2^2*n)
         if self.n != 0 and other.n != 0 and self.n != other.n:
             raise ValueError("Cannot divide radicals with different radicands")
         conjugate = Radical(other.a, -other.b, other.n)
@@ -488,7 +486,6 @@ def durand_kerner(coeffs, max_iter=1000, tol=1e-12):
         return result
 
     # Initialize n distinct complex starting points on a circle
-    # Use radius based on coefficients for better convergence
     radius = 1 + max(abs(complex(c)) for c in norm_coeffs[:-1])
     roots = []
     for k in range(n):
@@ -518,12 +515,15 @@ def durand_kerner(coeffs, max_iter=1000, tol=1e-12):
 
 
 # ---------------------------------------------------------------------------
-# Parsing helpers for calc14 special functions
+# Parsing helpers for calc15 special functions
 # ---------------------------------------------------------------------------
 
 def _parse_poly_expr(expr_str):
-    """Parse a polynomial expression string using Calculator13, returning a Polynomial."""
-    calc = Calculator13(expr_str)
+    """Parse a polynomial expression string using Calculator14, returning a Polynomial.
+
+    Uses Calculator14 which has multi-variable support for systems delegation.
+    """
+    calc = Calculator14(expr_str)
     result = calc.Parse()
     if isinstance(result, Polynomial):
         return result
@@ -533,86 +533,17 @@ def _parse_poly_expr(expr_str):
 
 
 # ---------------------------------------------------------------------------
-# Calculator14 class
+# Calculator15 class
 # ---------------------------------------------------------------------------
 
-class Calculator14(Calculator13):
+class Calculator15(Calculator14):
     """Polynomial tools: factor, long division, completing the square,
     binomial expansion, higher-degree solving."""
 
 
 # ---------------------------------------------------------------------------
-# calc14() entry function
+# calc15() entry function
 # ---------------------------------------------------------------------------
-
-@register("calc14", description="Polynomial factoring, long division, completing the square, binomial expansion, higher-degree equation solving",
-          short_desc="Poly Tools", group="solver",
-          examples=["factor(x^2-5*x+6)", "divpoly(x^3-1,x-1)", "complsq(x^2+6*x+5)", "binom(x+2,5)", "x^4-1=0"],
-          i18n={"zh": "\u591a\u9879\u5f0f\u5de5\u5177", "hi": "\u092c\u0939\u0941\u092a\u0926 \u0909\u092a\u0915\u0930\u0923", "es": "Herr. Polinomios", "fr": "Outils Polyn\u00f4mes", "ar": "\u0623\u062f\u0648\u0627\u062a \u0643\u062b\u064a\u0631\u0627\u062a \u0627\u0644\u062d\u062f\u0648\u062f", "pt": "Ferr. Polin\u00f4mios", "ru": "\u041f\u043e\u043b\u0438\u043d\u043e\u043c\u044b", "ja": "\u591a\u9805\u5f0f\u30c4\u30fc\u30eb", "de": "Polynom-Werkzeuge"})
-def calc14(expression):
-    """Polynomial tools: factor, long division, completing the square,
-    binomial expansion, higher-degree equation solving."""
-
-    expr = expression.strip()
-
-    # Delegate semicolon systems to calc13
-    if ';' in expression:
-        return calc13(expression)
-
-    # Handle special function calls: factor(...), divpoly(...), complsq(...), binom(...)
-    if expr.startswith("factor(") and expr.endswith(")"):
-        inner = expr[7:-1]
-        poly = _parse_poly_expr(inner)
-        # If the polynomial is a constant (degree 0), do numeric prime factoring
-        if poly.is_constant():
-            return _format_factors(_prime_factors(int(poly.constant_value())))
-        return factor_polynomial(poly)
-
-    if expr.startswith("divpoly(") and expr.endswith(")"):
-        inner = expr[8:-1]
-        # Split on comma, respecting parentheses
-        parts = _split_args(inner)
-        if len(parts) != 2:
-            raise Exception("divpoly requires exactly 2 arguments: dividend, divisor")
-        dividend = _parse_poly_expr(parts[0].strip())
-        divisor = _parse_poly_expr(parts[1].strip())
-        quotient, remainder = poly_divide(dividend, divisor)
-        if remainder.degree() == 0 and remainder.coeffs[0] == 0:
-            return str(quotient)
-        return f"{quotient} R {remainder}"
-
-    if expr.startswith("complsq(") and expr.endswith(")"):
-        inner = expr[8:-1]
-        poly = _parse_poly_expr(inner)
-        return complete_square(poly)
-
-    if expr.startswith("binom(") and expr.endswith(")"):
-        inner = expr[6:-1]
-        parts = _split_args(inner)
-        if len(parts) != 2:
-            raise Exception("binom requires exactly 2 arguments: expression, exponent")
-        poly = _parse_poly_expr(parts[0].strip())
-        n_val = int(parts[1].strip())
-        result = binom_expand(poly, n_val)
-        return str(result)
-
-    # Handle equations with '='
-    if '=' in expr:
-        return _solve_equation(expr)
-
-    # Otherwise simplify
-    calculator = Calculator14(expr)
-    result = calculator.Parse()
-    if isinstance(result, Matrix):
-        return _format_matrix_result(result)
-    if isinstance(result, list):
-        return _format_matrix_result(result)
-    if isinstance(result, Polynomial):
-        if result.is_constant():
-            return _format_solution(result.constant_value())
-        return str(result)
-    return _format_solution(result)
-
 
 def _split_args(s):
     """Split a string by commas, respecting parentheses."""
@@ -642,10 +573,10 @@ def _solve_equation(expression):
         raise Exception("Only one '=' sign allowed")
     left_expr, right_expr = sides
 
-    calc_left = Calculator14(left_expr)
+    calc_left = Calculator15(left_expr)
     left = calc_left.Parse()
 
-    calc_right = Calculator14(right_expr)
+    calc_right = Calculator15(right_expr)
     right = calc_right.Parse()
 
     var = calc_left._var_name or calc_right._var_name or 'x'
@@ -685,3 +616,69 @@ def _solve_equation(expression):
     for sol in solutions:
         parts.append(f"{var}={_format_solution(sol)}")
     return '; '.join(parts)
+
+
+@register("calc15", description="Polynomial factoring, equation solving, long division, completing the square, binomial expansion",
+          short_desc="Polynomial Tools", group="solver",
+          examples=["factor(x^2-5*x+6)", "x^4-1=0", "divpoly(x^3-1,x-1)", "binom(x+1,3)"],
+          i18n={"zh": "\u591a\u9879\u5f0f\u5de5\u5177", "hi": "\u092c\u0939\u0941\u092a\u0926 \u0909\u092a\u0915\u0930\u0923", "es": "Herr. Polinomios", "fr": "Outils Polyn\u00f4mes", "ar": "\u0623\u062f\u0648\u0627\u062a \u0643\u062b\u064a\u0631\u0627\u062a \u0627\u0644\u062d\u062f\u0648\u062f", "pt": "Ferr. Polin\u00f4mios", "ru": "\u041f\u043e\u043b\u0438\u043d\u043e\u043c\u044b", "ja": "\u591a\u9805\u5f0f\u30c4\u30fc\u30eb", "de": "Polynom-Werkzeuge"})
+def calc15(expression):
+    """Polynomial tools: factor, long division, completing the square,
+    binomial expansion, higher-degree equation solving."""
+
+    expr = expression.strip()
+
+    # Delegate semicolon systems to calc14
+    if ';' in expression:
+        return calc14(expression)
+
+    # Handle special function calls: factor(...), divpoly(...), complsq(...), binom(...)
+    if expr.startswith("factor(") and expr.endswith(")"):
+        inner = expr[7:-1]
+        poly = _parse_poly_expr(inner)
+        # If the polynomial is a constant (degree 0), do numeric prime factoring
+        if poly.is_constant():
+            return _format_factors(_prime_factors(int(poly.constant_value())))
+        return factor_polynomial(poly)
+
+    if expr.startswith("divpoly(") and expr.endswith(")"):
+        inner = expr[8:-1]
+        # Split on comma, respecting parentheses
+        parts = _split_args(inner)
+        if len(parts) != 2:
+            raise Exception("divpoly requires exactly 2 arguments: dividend, divisor")
+        dividend = _parse_poly_expr(parts[0].strip())
+        divisor = _parse_poly_expr(parts[1].strip())
+        quotient, remainder = poly_divide(dividend, divisor)
+        if remainder.degree() == 0 and remainder.coeffs[0] == 0:
+            return str(quotient)
+        return f"{quotient} R {remainder}"
+
+    if expr.startswith("complsq(") and expr.endswith(")"):
+        inner = expr[8:-1]
+        poly = _parse_poly_expr(inner)
+        return complete_square(poly)
+
+    if expr.startswith("binom(") and expr.endswith(")"):
+        inner = expr[6:-1]
+        parts = _split_args(inner)
+        if len(parts) != 2:
+            raise Exception("binom requires exactly 2 arguments: expression, exponent")
+        poly = _parse_poly_expr(parts[0].strip())
+        n_val = int(parts[1].strip())
+        result = binom_expand(poly, n_val)
+        return str(result)
+
+    # Check for inequality operators first (before '=' check, since <= and >= contain '=')
+    from calc.inequalities import _find_inequality_op
+    ops = _find_inequality_op(expr)
+    if ops:
+        # Delegate to calc14 which will delegate to calc13 for inequalities
+        return calc14(expression)
+
+    # Handle equations with '='
+    if '=' in expr:
+        return _solve_equation(expr)
+
+    # Otherwise delegate to calc14
+    return calc14(expression)

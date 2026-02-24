@@ -4,11 +4,12 @@ from calc.registry import REGISTRY
 from calc.core import *
 from calc.helpers import *
 from calc.numtheory import *
-from calc.matrix import *
 from calc.algebra import *
+from calc.inequalities import *
 from calc.systems import *
 from calc.polytools import *
-from calc.inequalities import *
+from calc.polyineq import *
+from calc.matrix import *
 from calc.tex import *
 
 

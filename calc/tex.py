@@ -469,8 +469,8 @@ def output_to_tex(result, calculator='calc1'):
     if not result:
         return ''
 
-    # Handle calc15 interval output
-    if calculator == 'calc15':
+    # Handle inequality/interval output (calc13: linear, calc16: polynomial)
+    if calculator in ('calc13', 'calc16'):
         return _calc15_output_to_tex(result)
 
     # Handle semicolon-separated results (solutions or multi-var)

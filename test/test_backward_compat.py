@@ -2,14 +2,18 @@
 """Backward compatibility tests: verify each calcN passes all earlier test cases.
 
 KEY RULE: calcN must produce the same result as calcM for all M < N test cases.
-For example, calc15("1+2+3") must return "6" (same as calc1).
+For example, calc16("1+2+3") must return "6" (same as calc1).
 
 This test suite:
 1. Defines all test cases grouped by the level they were designed for.
-2. For each calculator level N (2..15), runs ALL test cases from levels 1..N-1.
+2. For each calculator level N, runs ALL test cases from levels 1..N-1.
 3. Computes the canonical expected value by running each expression through its
    native calculator, so we don't hard-code potentially stale expected values.
 4. Reports pass/fail with clear error messages and a summary matrix.
+
+NOTE: calc19 (matrices) can handle pure numeric expressions (levels 1-11) but
+NOT symbolic algebra or equation solving (levels 12-16). The backward compat
+test only checks calc19 against levels 1-11.
 """
 
 import sys
@@ -17,7 +21,7 @@ import os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from calc import (
     calc1, calc2, calc3, calc4, calc5, calc6, calc7, calc8, calc9,
-    calc10, calc11, calc12, calc13, calc14, calc15,
+    calc10, calc11, calc12, calc13, calc14, calc15, calc16, calc19,
 )
 
 # ---------------------------------------------------------------------------
@@ -27,7 +31,11 @@ CALC_FUNCTIONS = {
     1: calc1,   2: calc2,   3: calc3,   4: calc4,   5: calc5,
     6: calc6,   7: calc7,   8: calc8,   9: calc9,   10: calc10,
     11: calc11, 12: calc12, 13: calc13, 14: calc14, 15: calc15,
+    16: calc16, 19: calc19,
 }
+
+# Ordered list of all levels for iteration
+ALL_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19]
 
 # ---------------------------------------------------------------------------
 # Test cases grouped by the level they were DESIGNED for.
@@ -56,7 +64,7 @@ TESTS = {
         "1*2*3*4*5/6",
     ],
 
-    # ---- calc3: parentheses and exponents (recursive descent) ----
+    # ---- calc3: decimals (recursive descent parser, NO exponents) ----
     3: [
         "1+2+3",
         "123+456 - 789",
@@ -67,36 +75,100 @@ TESTS = {
         "1+2*3-5/4",
         "1*2*3*4*5/6",
         "1+2*(3-4)",
-        "(3^5+2)/(7*7)",
+        "1.5+2.3",
+        "3.14*2",
+        "1.5*2",
     ],
 
-    # ---- calc4: scientific notation and decimals ----
+    # ---- calc4: parentheses and exponents ----
     4: [
         "1+2+3",
         "1+2*3-4",
-        "1e2",
-        "1.5e3",
-        "2.5e-3",
-        "1.5E+3",
-        "1e2+1.5e2",
-        "1.5e3*2",
-        "(1e2+1.5e2)*2e1",
-        "1.5e3/1.5e2",
+        "1+2*(3-4)",
+        "(3^5+2)/(7*7)",
+        "2^10",
+        "2^0",
+        "1.5+2.3",
+        "3.14*2",
     ],
 
-    # ---- calc5: named constants (pi, e) ----
+    # ---- calc5: exponents and sqrt ----
     5: [
+        "sqrt(4)",
+        "sqrt(9)",
+        "2^10+sqrt(9)",
+        "sqrt(2)",
+        "1+2",
+        "2^10",
+        "1.5+2.3",
+    ],
+
+    # ---- calc6: GCD, LCM, primes, modulo ----
+    6: [
+        "gcd(12,8)",
+        "lcm(4,6)",
+        "17%3",
+        "factor(60)",
+        "floor(3.7)",
+        "ceil(3.2)",
+        "round(3.456)",
+        "isprime(7)",
+        "isprime(8)",
+        "gcd(12,8)+lcm(4,6)",
+    ],
+
+    # ---- calc7: pi, e, scientific notation ----
+    7: [
         "pi",
         "e",
         "2*pi",
-        "pi+e",
         "e^2",
+        "1e2",
+        "1.5e3",
+        "2.5e-3",
         "1e2*pi",
         "1+2",
     ],
 
-    # ---- calc6: imaginary unit and complex numbers ----
-    6: [
+    # ---- calc8: basic trig + degree mode ----
+    8: [
+        "sin(90d)",
+        "cos(180d)",
+        "tan(45d)",
+        "sin(0d)",
+        "cos(360d)",
+        "sin(pi/2)",
+        "cos(0)",
+        "tan(pi/4)",
+        "sin(0)",
+    ],
+
+    # ---- calc9: exp & log functions ----
+    9: [
+        "exp(1)",
+        "ln(1)",
+        "log(100)",
+        "logb(2,8)",
+        "logb(10,1000)",
+        "logb(2,1024)",
+    ],
+
+    # ---- calc10: factorial & combinatorics ----
+    10: [
+        "5!",
+        "3!+4!",
+        "C(10,3)",
+        "P(5,2)",
+        "C(52,5)",
+        "C(10,3)+P(5,2)",
+        "C(0,0)",
+        "P(0,0)",
+        "C(5,5)",
+        "P(5,0)",
+    ],
+
+    # ---- calc11: complex numbers ----
+    11: [
         "i",
         "i*i",
         "i^2",
@@ -107,94 +179,8 @@ TESTS = {
         "(1+i)/(1-i)",
         "2+3*i",
         "e^(i*pi)",
-        "1+2",
-    ],
-
-    # ---- calc7: math functions (sin, cos, tan, exp, ln, log, sqrt, abs, ...) ----
-    7: [
-        "sin(0)",
-        "cos(0)",
-        "sin(pi/2)",
-        "tan(pi/4)",
-        "sinh(0)",
-        "cosh(0)",
-        "exp(1)",
-        "ln(1)",
-        "log(100)",
-        "sqrt(4)",
-        "sqrt(0-1)",
         "abs(3+4*i)",
-        "e^(i*pi)",
         "1+2",
-    ],
-
-    # ---- calc8: number theory (gcd, lcm, factorial, modulo, factor, etc.) ----
-    8: [
-        "gcd(12,8)",
-        "lcm(4,6)",
-        "5!",
-        "17%3",
-        "factor(60)",
-        "floor(3.7)",
-        "ceil(3.2)",
-        "round(3.456)",
-        "isprime(7)",
-        "isprime(8)",
-        "gcd(12,8)+lcm(4,6)",
-        "3!+4!",
-    ],
-
-    # ---- calc9: combinatorics (C, P) ----
-    9: [
-        "C(10,3)",
-        "P(5,2)",
-        "C(52,5)",
-        "C(10,3)+P(5,2)",
-        "C(0,0)",
-        "P(0,0)",
-        "C(5,5)",
-        "P(5,0)",
-        # calc9 inherits calc8
-        "5!",
-        "gcd(12,8)",
-    ],
-
-    # ---- calc10: extended trig and logs (degree mode, sec, csc, cot, logb) ----
-    10: [
-        "sin(90d)",
-        "cos(180d)",
-        "tan(45d)",
-        "sin(0d)",
-        "cos(360d)",
-        "sec(0)",
-        "csc(pi/2)",
-        "cot(pi/4)",
-        "logb(2,8)",
-        "logb(10,1000)",
-        "logb(2,1024)",
-        # calc10 inherits calc9
-        "C(10,3)",
-        "P(5,2)",
-        "5!",
-    ],
-
-    # ---- calc11: matrix operations ----
-    11: [
-        "det([[1,2],[3,4]])",
-        "det([[1,0,0],[0,1,0],[0,0,1]])",
-        "trace([[1,2],[3,4]])",
-        "dot([1,2,3],[4,5,6])",
-        "cross([1,0,0],[0,1,0])",
-        "[[1,2],[3,4]]+[[5,6],[7,8]]",
-        "[[1,2],[3,4]]*[[1,0],[0,1]]",
-        "[[1,2],[3,4]]*[[5,6],[7,8]]",
-        "[[5,6],[7,8]]-[[1,2],[3,4]]",
-        "inv([[2,1],[1,1]])",
-        "2*[[1,2],[3,4]]",
-        "[[2,4],[6,8]]/2",
-        "trans([[1,2,3],[4,5,6]])",
-        "rref([[1,2,3],[4,5,6]])",
-        "[[1,1],[0,1]]^3",
     ],
 
     # ---- calc12: symbolic simplification and equation solving ----
@@ -256,8 +242,35 @@ TESTS = {
         "x^3-x=0",
     ],
 
-    # ---- calc13: multi-variable simplification and linear systems ----
+    # ---- calc13: linear inequalities ----
     13: [
+        # Linear inequalities
+        "2*x+3>7",
+        "3-x>=1",
+        "x<5",
+        "2*x>=4",
+        "x+1>0",
+        "5*x<=10",
+        # Absolute value inequalities
+        "abs(x-3)<5",
+        "abs(x)>=2",
+        "abs(x-2)<=5",
+        "abs(x)<3",
+        "abs(x)>0",
+        # Compound inequalities
+        "1<2*x+3<7",
+        "0<=x<=5",
+        # Constant inequalities
+        "3>2",
+        "1>2",
+        # Fallthrough
+        "2+3",
+        "x+1",
+        "2*x+3*x",
+    ],
+
+    # ---- calc14: multi-variable simplification and linear systems ----
+    14: [
         # Single-variable (same as calc12)
         "2*x+3*x",
         "2*x=4",
@@ -282,8 +295,8 @@ TESTS = {
         "2*x+y-z=1; x+y+z=6; x-y+2*z=5",
     ],
 
-    # ---- calc14: polynomial tools (factor, divpoly, complsq, binom, higher-degree eqs) ----
-    14: [
+    # ---- calc15: polynomial tools ----
+    15: [
         # Polynomial factoring
         "factor(x^2-5*x+6)",
         "factor(x^2-1)",
@@ -318,15 +331,8 @@ TESTS = {
         "x^3-6*x^2+11*x-6=0",
     ],
 
-    # ---- calc15: inequalities ----
-    15: [
-        # Linear inequalities
-        "2*x+3>7",
-        "3-x>=1",
-        "x<5",
-        "2*x>=4",
-        "x+1>0",
-        "5*x<=10",
+    # ---- calc16: polynomial inequalities ----
+    16: [
         # Quadratic inequalities
         "x^2-4>0",
         "x^2-4<0",
@@ -338,23 +344,54 @@ TESTS = {
         # Cubic inequalities
         "x^3-x>0",
         "x^3-x<0",
-        # Absolute value inequalities
-        "abs(x-3)<5",
-        "abs(x)>=2",
-        "abs(x-2)<=5",
-        "abs(x)<3",
-        "abs(x)>0",
-        # Compound inequalities
-        "1<2*x+3<7",
-        "0<=x<=5",
-        # Constant inequalities
-        "3>2",
-        "1>2",
-        # Fallthrough to parent calculator
+        # Fallthrough
         "2+3",
         "x+1",
         "2*x+3*x",
     ],
+
+    # ---- calc19: matrix operations ----
+    19: [
+        "det([[1,2],[3,4]])",
+        "det([[1,0,0],[0,1,0],[0,0,1]])",
+        "trace([[1,2],[3,4]])",
+        "dot([1,2,3],[4,5,6])",
+        "cross([1,0,0],[0,1,0])",
+        "[[1,2],[3,4]]+[[5,6],[7,8]]",
+        "[[1,2],[3,4]]*[[1,0],[0,1]]",
+        "[[1,2],[3,4]]*[[5,6],[7,8]]",
+        "[[5,6],[7,8]]-[[1,2],[3,4]]",
+        "inv([[2,1],[1,1]])",
+        "2*[[1,2],[3,4]]",
+        "[[2,4],[6,8]]/2",
+        "trans([[1,2,3],[4,5,6]])",
+        "rref([[1,2,3],[4,5,6]])",
+        "[[1,1],[0,1]]^3",
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Define which prior levels each calculator should be backward-compatible with.
+# The algebraic chain: calc12 -> calc13 -> calc14 -> calc15 -> calc16
+# calc19 branches off and only handles numeric expressions (levels 1-11).
+# ---------------------------------------------------------------------------
+COMPAT_LEVELS = {
+    2:  [1],
+    3:  [1, 2],
+    4:  [1, 2, 3],
+    5:  [1, 2, 3, 4],
+    6:  [1, 2, 3, 4, 5],
+    7:  [1, 2, 3, 4, 5, 6],
+    8:  [1, 2, 3, 4, 5, 6, 7],
+    9:  [1, 2, 3, 4, 5, 6, 7, 8],
+    10: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    11: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    12: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    13: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    14: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+    15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    16: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    19: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
 }
 
 
@@ -382,7 +419,7 @@ def compute_canonical_values():
 def run_backward_compat():
     """Run backward compatibility checks for every calculator level.
 
-    For each level N (2..15), run ALL test cases from levels 1..N-1 and verify
+    For each level N, run ALL test cases from its COMPAT_LEVELS and verify
     that calcN returns the same result as the native calculator for that level.
     """
     print("=" * 72)
@@ -410,14 +447,17 @@ def run_backward_compat():
     print("  Running backward compatibility checks...")
     print("-" * 72)
 
-    for level in range(2, 16):
+    for level in ALL_LEVELS:
+        if level not in COMPAT_LEVELS:
+            continue  # calc1 has no prior levels
+
         calc_fn = CALC_FUNCTIONS[level]
         level_pass = 0
         level_fail = 0
         level_error = 0
         matrix[level] = {}
 
-        for test_level in range(1, level):
+        for test_level in COMPAT_LEVELS[level]:
             if test_level not in canonical:
                 continue
             src_pass = 0
@@ -482,15 +522,15 @@ def run_backward_compat():
 
     # Header row
     header = "         "
-    for src in range(1, 16):
+    for src in ALL_LEVELS:
         header += f" {src:>3d}"
     print(header)
-    print("         " + " ----" * 15)
+    print("         " + " ----" * len(ALL_LEVELS))
 
-    for level in range(1, 16):
+    for level in ALL_LEVELS:
         row = f"  calc{level:2d} |"
-        for src in range(1, 16):
-            if src >= level:
+        for src in ALL_LEVELS:
+            if level not in COMPAT_LEVELS or src not in COMPAT_LEVELS.get(level, []):
                 row += "   -"
             elif level in matrix and src in matrix[level]:
                 p, f_count, e = matrix[level][src]

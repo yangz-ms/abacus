@@ -2,8 +2,8 @@ import math
 
 from calc.registry import register
 from calc.helpers import _to_int, _format_solution
-from calc.matrix import Calculator11, Matrix, _clean_float, _format_matrix_result
-from calc.algebra import Polynomial, Calculator12, _unwrap_poly, _unwrap_matrix, _unwrap_vector
+from calc.algebra import Polynomial, Calculator12, _unwrap_poly
+from calc.inequalities import Calculator13
 
 
 class MultiPolynomial:
@@ -264,7 +264,8 @@ def solve_linear_system(equations, variables):
     return result
 
 
-class Calculator13(Calculator12):
+class Calculator14(Calculator13):
+    """Multi-variable linear equation systems."""
     _var_names = None
     _multi_mode = False
 
@@ -291,9 +292,6 @@ class Calculator13(Calculator12):
 
     def Value(self):
         next = self.PeekNextToken()
-        # Delegate matrix/vector literals to inherited Calculator11 handler
-        if next == '[' and hasattr(self, '_parse_matrix_or_vector'):
-            return self._parse_matrix_or_vector()
         if next == "(":
             self.PopNextToken()
             result = self.Expr()
@@ -304,7 +302,7 @@ class Calculator13(Calculator12):
         elif next is not None and next[0].isalpha():
             name = self.PopNextToken()
             if self.PeekNextToken() == "(":
-                _all_funcs = set(self.FUNCTIONS) | set(self.MULTI_FUNCTIONS) | getattr(self, 'MATRIX_FUNCTIONS', set()) | getattr(self, 'VECTOR_FUNCTIONS', set())
+                _all_funcs = set(self.FUNCTIONS) | set(self.MULTI_FUNCTIONS)
                 if name not in _all_funcs:
                     raise Exception(f"Unknown function '{name}'")
                 self.PopNextToken()
@@ -312,29 +310,6 @@ class Calculator13(Calculator12):
                 closing = self.PopNextToken()
                 if closing != ")":
                     raise Exception(f"Invalid token {closing}")
-                # Matrix/vector functions
-                if hasattr(self, 'MATRIX_FUNCTIONS') and name in self.MATRIX_FUNCTIONS:
-                    arg = _unwrap_matrix(args[0])
-                    if isinstance(arg, Matrix):
-                        if name == 'det':
-                            d = _clean_float(arg.det())
-                            return _multi_from_const(d) if self._multi_mode else Polynomial([d], var=self._var_name or 'x')
-                        if name == 'inv': return arg.inv()
-                        if name == 'trans': return arg.transpose()
-                        if name == 'trace':
-                            t = _clean_float(arg.trace())
-                            return _multi_from_const(t) if self._multi_mode else Polynomial([t], var=self._var_name or 'x')
-                        if name == 'rref': return arg.rref()
-                if hasattr(self, 'VECTOR_FUNCTIONS') and name in self.VECTOR_FUNCTIONS:
-                    if name == 'dot' and len(args) == 2:
-                        v1 = _unwrap_vector(self._to_vector(args[0]))
-                        v2 = _unwrap_vector(self._to_vector(args[1]))
-                        r = Matrix.dot(v1, v2)
-                        return _multi_from_const(r) if self._multi_mode else Polynomial([r], var=self._var_name or 'x')
-                    if name == 'cross' and len(args) == 2:
-                        v1 = _unwrap_vector(self._to_vector(args[0]))
-                        v2 = _unwrap_vector(self._to_vector(args[1]))
-                        return Matrix.cross(v1, v2)
                 if name in self.MULTI_FUNCTIONS:
                     # Unwrap Polynomial/MultiPolynomial constants
                     unwrapped = []
@@ -409,28 +384,13 @@ class Calculator13(Calculator12):
         while next == "*" or next == "/" or next == "%":
             self.PopNextToken()
             right = self.Power()
-            # Unwrap Polynomial/MultiPolynomial constants when one operand is a Matrix
-            if isinstance(result, Matrix) and isinstance(right, (Polynomial, MultiPolynomial)) and right.is_constant():
-                right = right.constant_value()
-            elif isinstance(right, Matrix) and isinstance(result, (Polynomial, MultiPolynomial)) and result.is_constant():
-                result = result.constant_value()
-            elif self._multi_mode and not isinstance(result, Matrix) and not isinstance(right, Matrix):
+            if self._multi_mode:
                 result = self._promote_to_multi(result)
                 right = self._promote_to_multi(right)
             if next == "*":
-                if isinstance(result, Matrix) and isinstance(right, Matrix):
-                    result = result * right
-                elif isinstance(result, Matrix) and isinstance(right, (int, float, complex)):
-                    result = result * right
-                elif isinstance(result, (int, float, complex)) and isinstance(right, Matrix):
-                    result = right * result
-                else:
-                    result = result * right
+                result = result * right
             elif next == "/":
-                if isinstance(result, Matrix) and isinstance(right, (int, float, complex)):
-                    result = result / right
-                else:
-                    result = result / right
+                result = result / right
             elif next == "%":
                 a = result.constant_value() if isinstance(result, (Polynomial, MultiPolynomial)) and result.is_constant() else result
                 b = right.constant_value() if isinstance(right, (Polynomial, MultiPolynomial)) and right.is_constant() else right
@@ -448,12 +408,7 @@ class Calculator13(Calculator12):
         while next == "+" or next == "-":
             self.PopNextToken()
             right = self.Product()
-            # Unwrap Polynomial/MultiPolynomial constants when one operand is a Matrix
-            if isinstance(result, Matrix) and isinstance(right, (Polynomial, MultiPolynomial)) and right.is_constant():
-                right = right.constant_value()
-            elif isinstance(right, Matrix) and isinstance(result, (Polynomial, MultiPolynomial)) and result.is_constant():
-                result = result.constant_value()
-            elif self._multi_mode and not isinstance(result, Matrix) and not isinstance(right, Matrix):
+            if self._multi_mode:
                 result = self._promote_to_multi(result)
                 right = self._promote_to_multi(right)
             if next == "+":
@@ -482,12 +437,7 @@ class Calculator13(Calculator12):
         if next == "^":
             self.PopNextToken()
             exponent = self.Power()
-            if isinstance(result, Matrix):
-                exponent = _unwrap_poly(exponent)
-                if isinstance(exponent, MultiPolynomial) and exponent.is_constant():
-                    exponent = exponent.constant_value()
-                result = result ** int(exponent)
-            elif self._multi_mode:
+            if self._multi_mode:
                 result = self._promote_to_multi(result)
                 exponent = self._promote_to_multi(exponent)
                 result = result ** exponent
@@ -513,17 +463,24 @@ def _promote_to_multi_poly(value):
     return value
 
 
-@register("calc13", description="Multi-variable linear equation systems",
+@register("calc14", description="Multi-variable linear equation systems",
           short_desc="Linear Systems", group="solver",
-          examples=["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"],
+          examples=["x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"],
           i18n={"zh": "\u7ebf\u6027\u65b9\u7a0b\u7ec4", "hi": "\u0930\u0948\u0916\u093f\u0915 \u0938\u092e\u0940\u0915\u0930\u0923 \u0928\u093f\u0915\u093e\u092f", "es": "Sistemas Lineales", "fr": "Syst\u00e8mes Lin\u00e9aires", "ar": "\u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u062e\u0637\u064a\u0629", "pt": "Sistemas Lineares", "ru": "\u041b\u0438\u043d\u0435\u0439\u043d\u044b\u0435 \u0441\u0438\u0441\u0442\u0435\u043c\u044b", "ja": "\u9023\u7acb\u4e00\u6b21\u65b9\u7a0b\u5f0f", "de": "Lineare Systeme"})
-def calc13(expression):
+def calc14(expression):
     '''
-    Extends calc12 to support multi-variable linear algebra.
+    Extends calc13 to support multi-variable linear algebra.
     Multiple equations separated by ';' are solved as a system.
     eg. x+y=2; x-y=0 -> x=1; y=1
     Supports up to 3 variables.
     '''
+    # Check for inequality operators first (before '=' check, since <= and >= contain '=')
+    from calc.inequalities import _find_inequality_op
+    ineq_ops = _find_inequality_op(expression)
+    if ineq_ops:
+        from calc.inequalities import calc13
+        return calc13(expression)
+
     if ';' in expression:
         equation_strs = [s.strip() for s in expression.split(';')]
         all_equations = []
@@ -536,9 +493,9 @@ def calc13(expression):
                 raise Exception("Only one '=' sign allowed per equation")
             left_str, right_str = sides
 
-            calc_left = Calculator13(left_str)
+            calc_left = Calculator14(left_str)
             left = calc_left.Parse()
-            calc_right = Calculator13(right_str)
+            calc_right = Calculator14(right_str)
             right = calc_right.Parse()
 
             for c in [calc_left, calc_right]:
@@ -563,12 +520,12 @@ def calc13(expression):
             raise Exception("Only one '=' sign allowed")
         left_expr, right_expr = sides
 
-        calc_left = Calculator13(left_expr)
+        calc_left = Calculator14(left_expr)
         left = calc_left.Parse()
         var_left = calc_left._var_name
         vars_left = calc_left._var_names
 
-        calc_right = Calculator13(right_expr)
+        calc_right = Calculator14(right_expr)
         right = calc_right.Parse()
         var_right = calc_right._var_name
         vars_right = calc_right._var_names
@@ -624,12 +581,14 @@ def calc13(expression):
                 parts.append(f"{var}={_format_solution(solution[var])}")
             return '; '.join(parts)
     else:
-        calculator = Calculator13(expression)
+        # No ';' or '=': check for inequality operators, otherwise parse with
+        # Calculator14 for multi-variable simplification support
+        from calc.inequalities import calc13, _find_inequality_op
+        ops = _find_inequality_op(expression)
+        if ops:
+            return calc13(expression)
+        calculator = Calculator14(expression)
         result = calculator.Parse()
-        if isinstance(result, Matrix):
-            return _format_matrix_result(result)
-        if isinstance(result, list):
-            return _format_matrix_result(result)
         if isinstance(result, MultiPolynomial):
             if result.is_constant():
                 return _format_solution(result.constant_value())

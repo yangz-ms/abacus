@@ -3,7 +3,7 @@ import cmath
 from fractions import Fraction
 from functools import reduce
 
-from calc.core import Calculator7, format_complex
+from calc.core import Calculator5, format_complex
 from calc.registry import register
 from calc.helpers import _to_int, _fmt_num
 
@@ -54,8 +54,12 @@ def _isprime(n):
     return 1
 
 
-class Calculator8(Calculator7):
-    """Number theory: gcd, lcm, factorial, modulo, prime factorization, rounding."""
+# ---------------------------------------------------------------------------
+# Calculator6: GCD, LCM, primes, modulo, floor, ceil, rounding
+# ---------------------------------------------------------------------------
+
+class Calculator6(Calculator5):
+    """Number theory: gcd, lcm, modulo, prime factorization, rounding."""
 
     MULTI_FUNCTIONS = {
         'gcd': lambda args: reduce(math.gcd, [int(a) for a in args]),
@@ -64,7 +68,7 @@ class Calculator8(Calculator7):
     }
 
     FUNCTIONS = {
-        **Calculator7.FUNCTIONS,
+        **Calculator5.FUNCTIONS,
         'floor': math.floor,
         'ceil': math.ceil,
         'isprime': lambda x: _isprime(x),
@@ -85,14 +89,6 @@ class Calculator8(Calculator7):
                     j += 1
                     while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
                         j += 1
-                if j < len(expression) and expression[j] in ('e', 'E'):
-                    k = j + 1
-                    if k < len(expression) and expression[k] in ('+', '-'):
-                        k += 1
-                    if k < len(expression) and expression[k] >= '0' and expression[k] <= '9':
-                        j = k
-                        while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
-                            j += 1
                 self.exp.append(expression[i:j])
                 i = j
             elif c.isalpha():
@@ -101,7 +97,7 @@ class Calculator8(Calculator7):
                     j += 1
                 self.exp.append(expression[i:j])
                 i = j
-            elif c in ('+', '-', '*', '/', '^', '(', ')', '!', '%', ','):
+            elif c in ('+', '-', '*', '/', '^', '(', ')', '%', ','):
                 self.exp.append(c)
                 i += 1
             elif c == ' ':
@@ -109,40 +105,48 @@ class Calculator8(Calculator7):
             else:
                 raise Exception(f"Invalid character '{c}'")
 
+    def _parse_function_args(self):
+        """Parse comma-separated arguments inside function call parentheses."""
+        args = [self.Expr()]
+        while self.PeekNextToken() == ",":
+            self.PopNextToken()  # consume ','
+            args.append(self.Expr())
+        return args
+
     def Value(self):
         next = self.PeekNextToken()
         if next == "(":
             self.PopNextToken()
             result = self.Expr()
-            next = self.PopNextToken()
-            if next != ")":
-                raise Exception(f"Invalid token {next}")
+            closing = self.PopNextToken()
+            if closing != ")":
+                raise Exception(f"Invalid token {closing}")
         elif next is not None and next[0].isalpha():
             name = self.PopNextToken()
             if self.PeekNextToken() == "(":
                 if name in self.MULTI_FUNCTIONS:
                     self.PopNextToken()  # consume '('
-                    args = [self.Expr()]
-                    while self.PeekNextToken() == ",":
-                        self.PopNextToken()  # consume ','
-                        args.append(self.Expr())
+                    args = self._parse_function_args()
                     closing = self.PopNextToken()
                     if closing != ")":
                         raise Exception(f"Invalid token {closing}")
                     result = self.MULTI_FUNCTIONS[name](args)
                 elif name in self.FUNCTIONS:
+                    func = self.FUNCTIONS[name]
                     self.PopNextToken()  # consume '('
                     arg = self.Expr()
                     closing = self.PopNextToken()
                     if closing != ")":
                         raise Exception(f"Invalid token {closing}")
-                    result = self.FUNCTIONS[name](arg)
+                    result = func(arg)
+                    if isinstance(result, complex) and result.imag == 0:
+                        result = result.real
                 else:
                     raise Exception(f"Unknown function '{name}'")
-            elif name in self.CONSTANTS:
+            elif hasattr(self, 'CONSTANTS') and name in self.CONSTANTS:
                 result = self.CONSTANTS[name]
             else:
-                raise Exception(f"Unknown constant '{name}'")
+                raise Exception(f"Unknown identifier '{name}'")
         else:
             next = self.PopNextToken()
             if next is None:
@@ -154,22 +158,6 @@ class Calculator8(Calculator7):
                     result = int(next)
             except (ValueError, TypeError):
                 raise Exception(f"Unexpected token {next}")
-        return result
-
-    def Postfix(self):
-        result = self.Value()
-        while self.PeekNextToken() == "!":
-            self.PopNextToken()
-            result = math.factorial(int(result))
-        return result
-
-    def Power(self):
-        result = self.Postfix()
-        next = self.PeekNextToken()
-        if next == "^":
-            self.PopNextToken()
-            nextResult = self.Power()
-            result = pow(result, nextResult)
         return result
 
     def Product(self):
@@ -191,81 +179,29 @@ class Calculator8(Calculator7):
         return result
 
 
-@register("calc8", description="Number theory: GCD, LCM, factorial, prime factorization, modulo, rounding",
+@register("calc6", description="GCD, LCM, primes, modulo, and rounding",
           short_desc="Number Theory", group="expression",
-          examples=["gcd(12,8)", "5!", "factor(60)", "17%3", "floor(3.7)"],
-          i18n={"zh": "\u6570\u8bba", "hi": "\u0938\u0902\u0916\u094d\u092f\u093e \u0938\u093f\u0926\u094d\u0927\u093e\u0902\u0924", "es": "Teor\u00eda de N\u00fameros", "fr": "Th\u00e9orie des Nombres", "ar": "\u0646\u0638\u0631\u064a\u0629 \u0627\u0644\u0623\u0639\u062f\u0627\u062f", "pt": "Teoria dos N\u00fameros", "ru": "\u0422\u0435\u043e\u0440\u0438\u044f \u0447\u0438\u0441\u0435\u043b", "ja": "\u6570\u8ad6", "de": "Zahlentheorie"})
-def calc8(expression):
-    """Number theory: gcd, lcm, factorial, modulo, prime factorization, rounding."""
-    calculator = Calculator8(expression)
+          examples=["gcd(12,8)", "17%3", "factor(60)", "floor(3.7)"],
+          i18n={"zh": "数论", "hi": "संख्या सिद्धांत", "es": "Teoría de Números", "fr": "Théorie des Nombres", "ar": "نظرية الأعداد", "pt": "Teoria dos Números", "ru": "Теория чисел", "ja": "数論", "de": "Zahlentheorie"})
+def calc6(expression):
+    """GCD, LCM, primes, modulo, and rounding."""
+    calculator = Calculator6(expression)
     result = calculator.Parse()
     if isinstance(result, str):
         return result
     return format_complex(result)
 
 
-# --- Calculator9: Combinatorics (permutations, combinations) ---
+# ---------------------------------------------------------------------------
+# Calculator7: Pi, e, Scientific Notation
+# ---------------------------------------------------------------------------
 
-class Calculator9(Calculator8):
-    """Combinatorics: permutations and combinations."""
+class Calculator7(Calculator6):
+    """Named constants (pi, e) and scientific notation."""
 
-    MULTI_FUNCTIONS = {
-        **Calculator8.MULTI_FUNCTIONS,
-        'C': lambda args: math.comb(int(args[0]), int(args[1])),
-        'P': lambda args: math.perm(int(args[0]), int(args[1])),
-    }
-
-    def Value(self):
-        next = self.PeekNextToken()
-        if next is not None and next[0].isalpha() and next in self.MULTI_FUNCTIONS:
-            name = self.PopNextToken()
-            if self.PeekNextToken() == "(":
-                self.PopNextToken()  # consume '('
-                args = [self.Expr()]
-                while self.PeekNextToken() == ",":
-                    self.PopNextToken()  # consume ','
-                    args.append(self.Expr())
-                closing = self.PopNextToken()
-                if closing != ")":
-                    raise Exception(f"Invalid token {closing}")
-                return self.MULTI_FUNCTIONS[name](args)
-            elif name in self.CONSTANTS:
-                return self.CONSTANTS[name]
-            else:
-                raise Exception(f"Unknown identifier '{name}'")
-        return super().Value()
-
-
-@register("calc9", description="Combinatorics: permutations and combinations",
-          short_desc="Combinatorics", group="expression",
-          examples=["C(10,3)", "P(5,2)", "C(52,5)"],
-          i18n={"zh": "\u7ec4\u5408\u6570\u5b66", "hi": "\u0938\u0902\u092f\u094b\u091c\u0928", "es": "Combinatoria", "fr": "Combinatoire", "ar": "\u0627\u0644\u062a\u0648\u0627\u0641\u064a\u0642", "pt": "Combinat\u00f3ria", "ru": "\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0442\u043e\u0440\u0438\u043a\u0430", "ja": "\u7d44\u5408\u305b", "de": "Kombinatorik"})
-def calc9(expression):
-    """Combinatorics: permutations and combinations."""
-    calculator = Calculator9(expression)
-    result = calculator.Parse()
-    if isinstance(result, str):
-        return result
-    return format_complex(result)
-
-
-# --- Calculator10: Extended Trig & Logs ---
-
-class Calculator10(Calculator9):
-    """Extended trig (degree mode, sec/csc/cot), arbitrary-base log, polar/rect conversion."""
-
-    MULTI_FUNCTIONS = {
-        **Calculator9.MULTI_FUNCTIONS,
-        'logb': lambda args: cmath.log(args[1]) / cmath.log(args[0]),
-        'polar': None,
-        'rect': None,
-    }
-
-    FUNCTIONS = {
-        **Calculator8.FUNCTIONS,
-        'sec': lambda x: 1 / cmath.cos(x),
-        'csc': lambda x: 1 / cmath.sin(x),
-        'cot': lambda x: cmath.cos(x) / cmath.sin(x),
+    CONSTANTS = {
+        'pi': math.pi,
+        'e':  math.e,
     }
 
     def __init__(self, expression):
@@ -282,6 +218,235 @@ class Calculator10(Calculator9):
                     j += 1
                     while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
                         j += 1
+                # Scientific notation: only consume e/E if followed by digit or sign+digit
+                if j < len(expression) and expression[j] in ('e', 'E'):
+                    k = j + 1
+                    if k < len(expression) and expression[k] in ('+', '-'):
+                        k += 1
+                    if k < len(expression) and expression[k] >= '0' and expression[k] <= '9':
+                        j = k
+                        while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                            j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c.isalpha():
+                j = i
+                while j < len(expression) and expression[j].isalpha():
+                    j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c in ('+', '-', '*', '/', '^', '(', ')', '%', ','):
+                self.exp.append(c)
+                i += 1
+            elif c == ' ':
+                i += 1
+            else:
+                raise Exception(f"Invalid character '{c}'")
+
+    def Value(self):
+        next = self.PeekNextToken()
+        if next == "(":
+            self.PopNextToken()
+            result = self.Expr()
+            closing = self.PopNextToken()
+            if closing != ")":
+                raise Exception(f"Invalid token {closing}")
+        elif next is not None and next[0].isalpha():
+            name = self.PopNextToken()
+            if self.PeekNextToken() == "(":
+                if name in self.MULTI_FUNCTIONS:
+                    self.PopNextToken()  # consume '('
+                    args = self._parse_function_args()
+                    closing = self.PopNextToken()
+                    if closing != ")":
+                        raise Exception(f"Invalid token {closing}")
+                    result = self.MULTI_FUNCTIONS[name](args)
+                elif name in self.FUNCTIONS:
+                    func = self.FUNCTIONS[name]
+                    self.PopNextToken()  # consume '('
+                    arg = self.Expr()
+                    closing = self.PopNextToken()
+                    if closing != ")":
+                        raise Exception(f"Invalid token {closing}")
+                    result = func(arg)
+                    if isinstance(result, complex) and result.imag == 0:
+                        result = result.real
+                else:
+                    raise Exception(f"Unknown function '{name}'")
+            elif name in self.CONSTANTS:
+                result = self.CONSTANTS[name]
+            else:
+                raise Exception(f"Unknown identifier '{name}'")
+        else:
+            next = self.PopNextToken()
+            if next is None:
+                raise Exception("Unexpected end")
+            try:
+                if '.' in next or 'e' in next or 'E' in next:
+                    result = float(next)
+                else:
+                    result = int(next)
+            except (ValueError, TypeError):
+                raise Exception(f"Unexpected token {next}")
+        return result
+
+
+@register("calc7", description="Named constants (pi, e) and scientific notation",
+          short_desc="Pi, e & Sci. Notation", group="expression",
+          examples=["2*pi", "e^2", "1.5e3*2"],
+          i18n={"zh": "常量与科学计数法", "hi": "स्थिरांक और वैज्ञानिक संकेतन", "es": "Constantes y Notación Científica", "fr": "Constantes et Notation Scientifique", "ar": "الثوابت والترميز العلمي", "pt": "Constantes e Notação Científica", "ru": "Константы и научная запись", "ja": "定数と科学表記法", "de": "Konstanten und Wissenschaftliche Notation"})
+def calc7(expression):
+    """Named constants (pi, e) and scientific notation."""
+    calculator = Calculator7(expression)
+    result = calculator.Parse()
+    if isinstance(result, str):
+        return result
+    return format_complex(result)
+
+
+# ---------------------------------------------------------------------------
+# Calculator8: Basic Trig + Degree Mode
+# ---------------------------------------------------------------------------
+
+class Calculator8(Calculator7):
+    """Basic trigonometry (sin, cos, tan) with degree mode."""
+
+    FUNCTIONS = {
+        **Calculator7.FUNCTIONS,
+        'sin':  cmath.sin,
+        'cos':  cmath.cos,
+        'tan':  cmath.tan,
+        'asin': cmath.asin,
+        'acos': cmath.acos,
+        'atan': cmath.atan,
+        'sinh': cmath.sinh,
+        'cosh': cmath.cosh,
+        'tanh': cmath.tanh,
+    }
+
+    def __init__(self, expression):
+        self.exp = []
+        self.idx = 0
+        i = 0
+        while i < len(expression):
+            c = expression[i]
+            if (c >= '0' and c <= '9') or c == '.':
+                j = i
+                while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                    j += 1
+                if j < len(expression) and expression[j] == '.':
+                    j += 1
+                    while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                        j += 1
+                # Scientific notation: only consume e/E if followed by digit or sign+digit
+                if j < len(expression) and expression[j] in ('e', 'E'):
+                    k = j + 1
+                    if k < len(expression) and expression[k] in ('+', '-'):
+                        k += 1
+                    if k < len(expression) and expression[k] >= '0' and expression[k] <= '9':
+                        j = k
+                        while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                            j += 1
+                num_str = expression[i:j]
+                # Degree mode: number followed by 'd' (not part of longer identifier)
+                if j < len(expression) and expression[j] == 'd':
+                    if j + 1 >= len(expression) or not expression[j + 1].isalpha():
+                        j += 1  # consume the 'd'
+                        val = float(num_str) * math.pi / 180
+                        self.exp.append(str(val))
+                        i = j
+                        continue
+                self.exp.append(num_str)
+                i = j
+            elif c.isalpha():
+                j = i
+                while j < len(expression) and expression[j].isalpha():
+                    j += 1
+                self.exp.append(expression[i:j])
+                i = j
+            elif c in ('+', '-', '*', '/', '^', '(', ')', '%', ','):
+                self.exp.append(c)
+                i += 1
+            elif c == ' ':
+                i += 1
+            else:
+                raise Exception(f"Invalid character '{c}'")
+
+
+@register("calc8", description="Basic trigonometry (sin, cos, tan) with degree mode",
+          short_desc="Basic Trig", group="expression",
+          examples=["sin(pi/2)", "cos(180d)", "tan(45d)"],
+          i18n={"zh": "基本三角函数", "hi": "बुनियादी त्रिकोणमिति", "es": "Trigonometría Básica", "fr": "Trigonométrie de Base", "ar": "حساب المثلثات الأساسي", "pt": "Trigonometria Básica", "ru": "Базовая тригонометрия", "ja": "基本三角関数", "de": "Grundlegende Trigonometrie"})
+def calc8(expression):
+    """Basic trigonometry (sin, cos, tan) with degree mode."""
+    calculator = Calculator8(expression)
+    result = calculator.Parse()
+    if isinstance(result, str):
+        return result
+    return format_complex(result)
+
+
+# ---------------------------------------------------------------------------
+# Calculator9: Exponential & Log Functions
+# ---------------------------------------------------------------------------
+
+class Calculator9(Calculator8):
+    """Exponential and logarithmic functions (exp, ln, log, logb)."""
+
+    FUNCTIONS = {
+        **Calculator8.FUNCTIONS,
+        'exp': cmath.exp,
+        'ln':  cmath.log,
+        'log': cmath.log10,
+    }
+
+    MULTI_FUNCTIONS = {
+        **Calculator8.MULTI_FUNCTIONS,
+        'logb': lambda args: cmath.log(args[1]) / cmath.log(args[0]),
+    }
+
+
+@register("calc9", description="Exponential and logarithmic functions (exp, ln, log, logb)",
+          short_desc="Exp & Log", group="expression",
+          examples=["exp(1)", "ln(1)", "log(100)", "logb(2,8)"],
+          i18n={"zh": "指数与对数", "hi": "घातीय और लघुगणक", "es": "Exponencial y Logaritmos", "fr": "Exponentielle et Logarithmes", "ar": "الأسية واللوغاريتمية", "pt": "Exponencial e Logaritmos", "ru": "Экспонента и логарифмы", "ja": "指数と対数", "de": "Exponential und Logarithmen"})
+def calc9(expression):
+    """Exponential and logarithmic functions (exp, ln, log, logb)."""
+    calculator = Calculator9(expression)
+    result = calculator.Parse()
+    if isinstance(result, str):
+        return result
+    return format_complex(result)
+
+
+# ---------------------------------------------------------------------------
+# Calculator10: Factorial & Combinatorics
+# ---------------------------------------------------------------------------
+
+class Calculator10(Calculator9):
+    """Factorial and combinatorics (n!, C, P)."""
+
+    MULTI_FUNCTIONS = {
+        **Calculator9.MULTI_FUNCTIONS,
+        'C': lambda args: math.comb(int(args[0]), int(args[1])),
+        'P': lambda args: math.perm(int(args[0]), int(args[1])),
+    }
+
+    def __init__(self, expression):
+        self.exp = []
+        self.idx = 0
+        i = 0
+        while i < len(expression):
+            c = expression[i]
+            if (c >= '0' and c <= '9') or c == '.':
+                j = i
+                while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                    j += 1
+                if j < len(expression) and expression[j] == '.':
+                    j += 1
+                    while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
+                        j += 1
+                # Scientific notation: only consume e/E if followed by digit or sign+digit
                 if j < len(expression) and expression[j] in ('e', 'E'):
                     k = j + 1
                     if k < len(expression) and expression[k] in ('+', '-'):
@@ -317,53 +482,77 @@ class Calculator10(Calculator9):
 
     def Value(self):
         next = self.PeekNextToken()
-        if next is not None and next[0].isalpha():
-            if next in self.MULTI_FUNCTIONS:
-                name = self.PopNextToken()
-                if self.PeekNextToken() == "(":
-                    self.PopNextToken()  # consume '('
-                    args = [self.Expr()]
-                    while self.PeekNextToken() == ",":
-                        self.PopNextToken()  # consume ','
-                        args.append(self.Expr())
-                    closing = self.PopNextToken()
-                    if closing != ")":
-                        raise Exception(f"Invalid token {closing}")
-                    handler = self.MULTI_FUNCTIONS[name]
-                    if name == 'polar':
-                        return self._polar(args[0], args[1])
-                    elif name == 'rect':
-                        return self._rect(args[0], args[1])
-                    else:
-                        return handler(args)
-                elif name in self.CONSTANTS:
-                    return self.CONSTANTS[name]
-                else:
-                    raise Exception(f"Unknown identifier '{name}'")
-        return Calculator9.Value(self)
+        # Special handling for C/P since they are uppercase and could conflict
+        if next is not None and next[0].isalpha() and next in self.MULTI_FUNCTIONS:
+            name = self.PopNextToken()
+            if self.PeekNextToken() == "(":
+                self.PopNextToken()  # consume '('
+                args = self._parse_function_args()
+                closing = self.PopNextToken()
+                if closing != ")":
+                    raise Exception(f"Invalid token {closing}")
+                return self.MULTI_FUNCTIONS[name](args)
+            elif name in self.CONSTANTS:
+                return self.CONSTANTS[name]
+            else:
+                raise Exception(f"Unknown identifier '{name}'")
+        return super().Value()
 
-    def _polar(self, x, y):
-        r = abs(complex(x, y))
-        theta = math.atan2(float(y), float(x))
-        r_str = _fmt_num(_to_int(r))
-        theta_str = _fmt_num(_to_int(round(theta, 10)))
-        return f"({r_str}, {theta_str})"
+    def Postfix(self):
+        result = self.Value()
+        while self.PeekNextToken() == "!":
+            self.PopNextToken()
+            result = math.factorial(int(result))
+        return result
 
-    def _rect(self, r, theta):
-        x = float(r) * math.cos(float(theta))
-        y = float(r) * math.sin(float(theta))
-        x_str = _fmt_num(_to_int(round(x, 10)))
-        y_str = _fmt_num(_to_int(round(y, 10)))
-        return f"({x_str}, {y_str})"
+    def Power(self):
+        result = self.Postfix()
+        next = self.PeekNextToken()
+        if next == "^":
+            self.PopNextToken()
+            nextResult = self.Power()
+            result = pow(result, nextResult)
+        return result
 
 
-@register("calc10", description="Extended trig (degree mode), reciprocal trig, arbitrary-base logarithm, polar/rectangular conversion",
-          short_desc="Trig & Logs", group="expression",
-          examples=["sin(90d)", "sec(pi/4)", "logb(2,8)", "polar(3,4)"],
-          i18n={"zh": "\u4e09\u89d2\u4e0e\u5bf9\u6570", "hi": "\u0924\u094d\u0930\u093f\u0915\u094b\u0923\u092e\u093f\u0924\u093f \u0914\u0930 \u0932\u0949\u0917", "es": "Trig y Logs", "fr": "Trigo et Logs", "ar": "\u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062b\u0644\u062b\u0627\u062a", "pt": "Trig e Logs", "ru": "\u0422\u0440\u0438\u0433. \u0438 \u043b\u043e\u0433.", "ja": "\u4e09\u89d2\u3068\u5bfe\u6570", "de": "Trig. und Log."})
+@register("calc10", description="Factorial and combinatorics (n!, C, P)",
+          short_desc="Factorial & Combinatorics", group="expression",
+          examples=["5!", "C(10,3)", "P(5,2)"],
+          i18n={"zh": "阶乘与组合", "hi": "क्रमगुणित और संयोजन", "es": "Factorial y Combinatoria", "fr": "Factorielle et Combinatoire", "ar": "العاملي والتوافيق", "pt": "Fatorial e Combinatória", "ru": "Факториал и комбинаторика", "ja": "階乗と組合せ", "de": "Fakultät und Kombinatorik"})
 def calc10(expression):
-    """Extended trig, arbitrary-base log, coordinate conversion."""
+    """Factorial and combinatorics (n!, C, P)."""
     calculator = Calculator10(expression)
+    result = calculator.Parse()
+    if isinstance(result, str):
+        return result
+    return format_complex(result)
+
+
+# ---------------------------------------------------------------------------
+# Calculator11: Complex Numbers
+# ---------------------------------------------------------------------------
+
+class Calculator11(Calculator10):
+    """Complex numbers (imaginary unit i)."""
+
+    CONSTANTS = {
+        **Calculator10.CONSTANTS,
+        'i': complex(0, 1),
+    }
+
+    FUNCTIONS = {
+        **Calculator10.FUNCTIONS,
+        'abs': abs,
+    }
+
+
+@register("calc11", description="Complex numbers (imaginary unit i)",
+          short_desc="Complex Numbers", group="expression",
+          examples=["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"],
+          i18n={"zh": "复数运算", "hi": "सम्मिश्र संख्याएँ", "es": "Números Complejos", "fr": "Nombres Complexes", "ar": "الأعداد المركبة", "pt": "Números Complexos", "ru": "Комплексные числа", "ja": "複素数", "de": "Komplexe Zahlen"})
+def calc11(expression):
+    """Complex numbers (imaginary unit i)."""
+    calculator = Calculator11(expression)
     result = calculator.Parse()
     if isinstance(result, str):
         return result

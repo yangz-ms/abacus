@@ -4,7 +4,7 @@ import cmath
 from calc.registry import register
 from calc.core import format_complex
 from calc.helpers import _to_int, _fmt_num, _cbrt, _clean_root, _unique_roots, _sort_roots, _format_solution
-from calc.matrix import Calculator11, Matrix, _clean_float, _format_matrix_result
+from calc.numtheory import Calculator11
 
 
 def _unwrap_poly(val):
@@ -12,20 +12,6 @@ def _unwrap_poly(val):
     if isinstance(val, Polynomial) and val.is_constant():
         return val.constant_value()
     return val
-
-
-def _unwrap_matrix(m):
-    """Unwrap Polynomial constants inside a Matrix."""
-    if isinstance(m, Matrix):
-        return Matrix([[_unwrap_poly(cell) for cell in row] for row in m.data])
-    return m
-
-
-def _unwrap_vector(v):
-    """Unwrap Polynomial constants inside a vector (list)."""
-    if isinstance(v, list):
-        return [_unwrap_poly(x) for x in v]
-    return v
 
 
 class Polynomial:
@@ -322,9 +308,6 @@ class Calculator12(Calculator11):
 
     def Value(self):
         next = self.PeekNextToken()
-        # Delegate matrix/vector literals to inherited Calculator11 handler
-        if next == '[' and hasattr(self, '_parse_matrix_or_vector'):
-            return self._parse_matrix_or_vector()
         if next == "(":
             self.PopNextToken()
             result = self.Expr()
@@ -335,7 +318,7 @@ class Calculator12(Calculator11):
         elif next is not None and next[0].isalpha():
             name = self.PopNextToken()
             if self.PeekNextToken() == "(":
-                _all_funcs = set(self.FUNCTIONS) | set(self.MULTI_FUNCTIONS) | getattr(self, 'MATRIX_FUNCTIONS', set()) | getattr(self, 'VECTOR_FUNCTIONS', set())
+                _all_funcs = set(self.FUNCTIONS) | set(self.MULTI_FUNCTIONS)
                 if name not in _all_funcs:
                     raise Exception(f"Unknown function '{name}'")
                 self.PopNextToken()
@@ -343,25 +326,6 @@ class Calculator12(Calculator11):
                 closing = self.PopNextToken()
                 if closing != ")":
                     raise Exception(f"Invalid token {closing}")
-                # Matrix/vector functions: delegate to Calculator11.Value handling
-                if hasattr(self, 'MATRIX_FUNCTIONS') and name in self.MATRIX_FUNCTIONS:
-                    arg = _unwrap_matrix(args[0])
-                    if isinstance(arg, Matrix):
-                        if name == 'det': return Polynomial([_clean_float(arg.det())], var=self._var_name or 'x')
-                        if name == 'inv': return arg.inv()
-                        if name == 'trans': return arg.transpose()
-                        if name == 'trace': return Polynomial([_clean_float(arg.trace())], var=self._var_name or 'x')
-                        if name == 'rref': return arg.rref()
-                    return Polynomial([0], var=self._var_name or 'x')
-                if hasattr(self, 'VECTOR_FUNCTIONS') and name in self.VECTOR_FUNCTIONS:
-                    if name == 'dot' and len(args) == 2:
-                        v1 = _unwrap_vector(self._to_vector(args[0]))
-                        v2 = _unwrap_vector(self._to_vector(args[1]))
-                        return Polynomial([Matrix.dot(v1, v2)], var=self._var_name or 'x')
-                    if name == 'cross' and len(args) == 2:
-                        v1 = _unwrap_vector(self._to_vector(args[0]))
-                        v2 = _unwrap_vector(self._to_vector(args[1]))
-                        return Matrix.cross(v1, v2)
                 if name in self.MULTI_FUNCTIONS:
                     # Unwrap Polynomial constants for numeric multi-arg functions
                     unwrapped = []
@@ -421,10 +385,7 @@ class Calculator12(Calculator11):
         if next == "^":
             self.PopNextToken()
             exponent = self.Power()
-            if isinstance(result, Matrix):
-                exponent = _unwrap_poly(exponent)
-                result = result ** int(exponent)
-            elif isinstance(result, Polynomial) and isinstance(exponent, Polynomial):
+            if isinstance(result, Polynomial) and isinstance(exponent, Polynomial):
                 result = result ** exponent
             elif isinstance(result, Polynomial):
                 result = result ** exponent
@@ -434,32 +395,16 @@ class Calculator12(Calculator11):
                 result = pow(result, exponent)
         return result
 
-
     def Product(self):
         result = self.Power()
         next = self.PeekNextToken()
         while next == "*" or next == "/" or next == "%":
             self.PopNextToken()
             right = self.Power()
-            # Unwrap Polynomial constants when one operand is a Matrix
-            if isinstance(result, Matrix) and isinstance(right, Polynomial) and right.is_constant():
-                right = right.constant_value()
-            elif isinstance(right, Matrix) and isinstance(result, Polynomial) and result.is_constant():
-                result = result.constant_value()
             if next == "*":
-                if isinstance(result, Matrix) and isinstance(right, Matrix):
-                    result = result * right
-                elif isinstance(result, Matrix) and isinstance(right, (int, float, complex)):
-                    result = result * right
-                elif isinstance(result, (int, float, complex)) and isinstance(right, Matrix):
-                    result = right * result
-                else:
-                    result = result * right
+                result = result * right
             elif next == "/":
-                if isinstance(result, Matrix) and isinstance(right, (int, float, complex)):
-                    result = result / right
-                else:
-                    result = result / right
+                result = result / right
             elif next == "%":
                 a = result.constant_value() if isinstance(result, Polynomial) and result.is_constant() else result
                 b = right.constant_value() if isinstance(right, Polynomial) and right.is_constant() else right
@@ -474,11 +419,6 @@ class Calculator12(Calculator11):
         while next == "+" or next == "-":
             self.PopNextToken()
             right = self.Product()
-            # Unwrap Polynomial constants when one operand is a Matrix
-            if isinstance(result, Matrix) and isinstance(right, Polynomial) and right.is_constant():
-                right = right.constant_value()
-            elif isinstance(right, Matrix) and isinstance(result, Polynomial) and result.is_constant():
-                result = result.constant_value()
             if next == "+":
                 result = result + right
             elif next == "-":
@@ -493,7 +433,7 @@ class Calculator12(Calculator11):
           i18n={"zh": "\u4ee3\u6570\u4e0e\u65b9\u7a0b", "hi": "\u092c\u0940\u091c\u0917\u0923\u093f\u0924 \u0914\u0930 \u0938\u092e\u0940\u0915\u0930\u0923", "es": "\u00c1lgebra y Ecuaciones", "fr": "Alg\u00e8bre et \u00c9quations", "ar": "\u0627\u0644\u062c\u0628\u0631 \u0648\u0627\u0644\u0645\u0639\u0627\u062f\u0644\u0627\u062a", "pt": "\u00c1lgebra e Equa\u00e7\u00f5es", "ru": "\u0410\u043b\u0433\u0435\u0431\u0440\u0430 \u0438 \u0443\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u044f", "ja": "\u4ee3\u6570\u3068\u65b9\u7a0b\u5f0f", "de": "Algebra und Gleichungen"})
 def calc12(expression):
     '''
-    Extends calc7 to support single-variable algebra and equation solving.
+    Extends calc11 to support single-variable algebra and equation solving.
     Without '=': simplify expression (eg. 2*x+3*x -> 5*x)
     With '=': solve equation (eg. x^2=1 -> x=-1; x=1)
     Supports linear, quadratic, and cubic equations.
@@ -538,10 +478,6 @@ def calc12(expression):
     else:
         calculator = Calculator12(expression)
         result = calculator.Parse()
-        if isinstance(result, Matrix):
-            return _format_matrix_result(result)
-        if isinstance(result, list):
-            return _format_matrix_result(result)
         if isinstance(result, Polynomial):
             if result.is_constant():
                 val = result.constant_value()

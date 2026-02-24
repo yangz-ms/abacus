@@ -2,9 +2,7 @@ import math
 
 from calc.registry import register
 from calc.helpers import _to_int
-from calc.algebra import Polynomial
-from calc.systems import Calculator13, MultiPolynomial
-from calc.polytools import Calculator14, calc14
+from calc.algebra import Polynomial, Calculator12
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +88,7 @@ def _format_num(x):
 
 
 # ---------------------------------------------------------------------------
-# Inequality tokenizer and parser
+# Inequality tokenizer and parser helpers
 # ---------------------------------------------------------------------------
 
 def _find_inequality_op(expression):
@@ -132,16 +130,17 @@ def _op_is_strict(op):
 
 
 def _parse_poly_from_expr(expr_str):
-    """Parse an expression string into a Polynomial using Calculator13."""
-    calc = Calculator13(expr_str)
+    """Parse an expression string into a Polynomial using Calculator12.
+
+    Uses Calculator12 (single-variable algebra) rather than a higher-level
+    calculator to avoid multi-variable parsing issues when we just want
+    a single-variable polynomial for inequality solving.
+    """
+    calc = Calculator12(expr_str)
     result = calc.Parse()
     var = calc._var_name or 'x'
     if isinstance(result, Polynomial):
         return result
-    if isinstance(result, MultiPolynomial):
-        if result.is_constant():
-            return Polynomial([result.constant_value()], var=var)
-        raise Exception("Multi-variable expressions not supported in inequalities")
     if isinstance(result, (int, float, complex)):
         return Polynomial([result], var=var)
     return Polynomial([result], var=var)
@@ -189,86 +188,6 @@ def _solve_linear_inequality(poly, op):
         return Interval([(boundary, float('inf'), inclusive, False)])
 
 
-def _eval_poly_at(poly, x):
-    """Evaluate polynomial at a point."""
-    result = 0
-    for i, c in enumerate(poly.coeffs):
-        result += c * (x ** i)
-    return result
-
-
-def _solve_quadratic_inequality(poly, op):
-    """Solve quadratic inequality by finding roots and testing intervals."""
-    # Find roots of poly = 0
-    roots = poly.solve()
-
-    # Filter to real roots only
-    real_roots = []
-    for r in roots:
-        if isinstance(r, complex):
-            if abs(r.imag) < 1e-9:
-                real_roots.append(_to_int(r.real))
-            # Complex roots: polynomial doesn't cross zero at real axis
-        else:
-            real_roots.append(r)
-
-    real_roots = sorted(real_roots)
-
-    # Leading coefficient determines sign at +infinity
-    leading = poly.coeffs[-1]
-    if isinstance(leading, complex):
-        raise Exception("Cannot solve inequality with complex coefficients")
-
-    if not real_roots:
-        # No real roots -- polynomial has constant sign
-        test_val = _eval_poly_at(poly, 0)
-        if _check_op(test_val, op):
-            return ALL_REALS
-        else:
-            return NO_SOLUTION
-
-    # Build test points for intervals
-    intervals_to_test = []
-    # (-inf, root0)
-    if real_roots:
-        test_point = real_roots[0] - 1
-        intervals_to_test.append((float('-inf'), real_roots[0], False, test_point))
-    # Between consecutive roots
-    for i in range(len(real_roots) - 1):
-        test_point = (real_roots[i] + real_roots[i+1]) / 2
-        intervals_to_test.append((real_roots[i], real_roots[i+1], False, test_point))
-    # (root_last, inf)
-    if real_roots:
-        test_point = real_roots[-1] + 1
-        intervals_to_test.append((real_roots[-1], float('inf'), False, test_point))
-
-    inclusive = op in ('<=', '>=')
-    strict_op = '<' if op in ('<', '<=') else '>'
-
-    result_intervals = []
-    for lo, hi, _, test_point in intervals_to_test:
-        val = _eval_poly_at(poly, test_point)
-        if _check_op(val, strict_op):
-            # Determine inclusivity at endpoints
-            lo_inc = inclusive and lo != float('-inf') and lo in real_roots
-            hi_inc = inclusive and hi != float('inf') and hi in real_roots
-            result_intervals.append((lo, hi, lo_inc, hi_inc))
-
-    # Also check if single root points are included (for <= or >=)
-    if inclusive:
-        for r in real_roots:
-            # Check if this root is already covered by an interval endpoint
-            already_covered = False
-            for lo, hi, lo_inc, hi_inc in result_intervals:
-                if (lo <= r <= hi):
-                    already_covered = True
-                    break
-            if not already_covered:
-                result_intervals.append((r, r, True, True))
-
-    return Interval(_merge_intervals(result_intervals))
-
-
 def _check_op(val, op):
     """Check if val satisfies the inequality operator against 0."""
     val = float(val) if not isinstance(val, (int, float)) else val
@@ -281,26 +200,6 @@ def _check_op(val, op):
     elif op == '>=':
         return val >= 0
     return False
-
-
-def _solve_polynomial_inequality(poly, op):
-    """Solve poly <op> 0."""
-    poly._trim()
-    deg = poly.degree()
-
-    if deg == 0:
-        val = poly.coeffs[0]
-        if _check_op(val, op):
-            return ALL_REALS
-        return NO_SOLUTION
-
-    if deg == 1:
-        return _solve_linear_inequality(poly, op)
-
-    if deg <= 3:
-        return _solve_quadratic_inequality(poly, op)
-
-    raise Exception(f"Cannot solve degree {deg} inequality")
 
 
 def _solve_abs_inequality(inner_expr, op, rhs_expr):
@@ -330,11 +229,11 @@ def _solve_abs_inequality(inner_expr, op, rhs_expr):
 
         # expr > -a  =>  expr - (-a) > 0  =>  expr + a > 0
         poly_lower = inner_poly + a
-        interval_lower = _solve_polynomial_inequality(poly_lower, op_lower)
+        interval_lower = _solve_inequality_linear(poly_lower, op_lower)
 
         # expr < a  =>  expr - a < 0
         poly_upper = inner_poly - a
-        interval_upper = _solve_polynomial_inequality(poly_upper, op_upper)
+        interval_upper = _solve_inequality_linear(poly_upper, op_upper)
 
         return interval_lower.intersect(interval_upper)
 
@@ -346,11 +245,11 @@ def _solve_abs_inequality(inner_expr, op, rhs_expr):
 
         # expr < -a  =>  expr + a < 0
         poly_lower = inner_poly + a
-        interval_lower = _solve_polynomial_inequality(poly_lower, op_lower)
+        interval_lower = _solve_inequality_linear(poly_lower, op_lower)
 
         # expr > a  =>  expr - a > 0
         poly_upper = inner_poly - a
-        interval_upper = _solve_polynomial_inequality(poly_upper, op_upper)
+        interval_upper = _solve_inequality_linear(poly_upper, op_upper)
 
         return interval_lower.union(interval_upper)
 
@@ -396,8 +295,34 @@ def _detect_abs_inequality(expression):
     return None
 
 
+def _solve_inequality_linear(poly, op):
+    """Solve poly <op> 0, but ONLY for linear and constant polynomials.
+
+    For quadratic or higher degree, raises an Exception indicating this
+    level cannot handle it. Polynomial inequalities are handled at a
+    higher level (Calculator16 / polyineq).
+    """
+    poly._trim()
+    deg = poly.degree()
+
+    if deg == 0:
+        val = poly.coeffs[0]
+        if _check_op(val, op):
+            return ALL_REALS
+        return NO_SOLUTION
+
+    if deg == 1:
+        return _solve_linear_inequality(poly, op)
+
+    raise Exception(f"Cannot solve degree {deg} inequality at this level")
+
+
 def solve_inequality(expression):
-    """Solve an inequality expression. Returns interval notation string."""
+    """Solve a linear inequality expression. Returns interval notation string.
+
+    This version handles only linear and absolute value inequalities.
+    For polynomial inequalities, use the polyineq module.
+    """
     expression = expression.strip()
 
     # Check for absolute value inequality
@@ -422,7 +347,6 @@ def solve_inequality(expression):
         right_str = expression[pos2+len2:].strip()
 
         # Solve: left <op1> mid AND mid <op2> right
-        # Rewrite as: mid - left > 0 (or appropriate) AND right - mid > 0
         left_poly = _parse_poly_from_expr(left_str)
         mid_poly = _parse_poly_from_expr(mid_str)
         right_poly = _parse_poly_from_expr(right_str)
@@ -430,11 +354,11 @@ def solve_inequality(expression):
         # left <op1> mid  =>  mid - left >/<op1_flipped> 0
         poly1 = mid_poly - left_poly
         flipped_op1 = _flip_op(op1)
-        interval1 = _solve_polynomial_inequality(poly1, flipped_op1)
+        interval1 = _solve_inequality_linear(poly1, flipped_op1)
 
         # mid <op2> right  =>  mid - right <op2> 0
         poly2 = mid_poly - right_poly
-        interval2 = _solve_polynomial_inequality(poly2, op2)
+        interval2 = _solve_inequality_linear(poly2, op2)
 
         return str(interval1.intersect(interval2))
 
@@ -457,23 +381,21 @@ def solve_inequality(expression):
         right_poly.var = left_poly.var
 
     poly = left_poly - right_poly
-    return str(_solve_polynomial_inequality(poly, op))
+    return str(_solve_inequality_linear(poly, op))
 
 
 # ---------------------------------------------------------------------------
-# Calculator15 class
+# Calculator13 class - Linear Inequalities
 # ---------------------------------------------------------------------------
 
-class Calculator15(Calculator14):
-    """Inequalities."""
+class Calculator13(Calculator12):
+    """Linear inequalities and absolute value inequalities."""
 
     def __init__(self, expression):
-        # Add comparison operator tokens to the tokenizer
+        # Tokenize with support for comparison operators < > <= >=
         self.exp = []
         self.idx = 0
-        self._var_names = set()
         self._var_name = None
-        self._multi_mode = False
         i = 0
         while i < len(expression):
             c = expression[i]
@@ -497,7 +419,8 @@ class Calculator15(Calculator14):
                 num_str = expression[i:j]
                 # Degree suffix: number followed by 'd'
                 if j < len(expression) and expression[j] == 'd' and (j + 1 >= len(expression) or not expression[j + 1].isalpha()):
-                    val = float(num_str) * math.pi / 180
+                    import math as _math
+                    val = float(num_str) * _math.pi / 180
                     self.exp.append(str(val))
                     j += 1
                 else:
@@ -530,12 +453,12 @@ class Calculator15(Calculator14):
 # Entry point
 # ---------------------------------------------------------------------------
 
-@register("calc15", description="Solve inequalities (linear, quadratic, absolute value)",
-          short_desc="Inequalities", group="solver",
-          examples=["2*x+3>7", "x^2-4<0", "abs(x-2)<=5"],
-          i18n={"zh": "\u4e0d\u7b49\u5f0f", "hi": "\u0905\u0938\u092e\u093f\u0915\u093e\u090f\u0901", "es": "Desigualdades", "fr": "In\u00e9galit\u00e9s", "ar": "\u0627\u0644\u0645\u062a\u0628\u0627\u064a\u0646\u0627\u062a", "pt": "Desigualdades", "ru": "\u041d\u0435\u0440\u0430\u0432\u0435\u043d\u0441\u0442\u0432\u0430", "ja": "\u4e0d\u7b49\u5f0f", "de": "Ungleichungen"})
-def calc15(expression):
-    """Inequalities."""
+@register("calc13", description="Solve linear inequalities and absolute value inequalities",
+          short_desc="Linear Inequalities", group="solver",
+          examples=["2*x+3>7", "x<5", "abs(x-2)<=5"],
+          i18n={"zh": "\u7ebf\u6027\u4e0d\u7b49\u5f0f", "hi": "\u0930\u0948\u0916\u093f\u0915 \u0905\u0938\u092e\u093f\u0915\u093e\u090f\u0901", "es": "Desigualdades Lineales", "fr": "In\u00e9galit\u00e9s Lin\u00e9aires", "ar": "\u0627\u0644\u0645\u062a\u0628\u0627\u064a\u0646\u0627\u062a \u0627\u0644\u062e\u0637\u064a\u0629", "pt": "Desigualdades Lineares", "ru": "\u041b\u0438\u043d\u0435\u0439\u043d\u044b\u0435 \u043d\u0435\u0440\u0430\u0432\u0435\u043d\u0441\u0442\u0432\u0430", "ja": "\u4e00\u6b21\u4e0d\u7b49\u5f0f", "de": "Lineare Ungleichungen"})
+def calc13(expression):
+    """Solve linear inequalities and absolute value inequalities."""
     expression = expression.strip()
 
     # Check for inequality operators (at top level, not inside parens)
@@ -543,6 +466,6 @@ def calc15(expression):
     if ops:
         return solve_inequality(expression)
 
-    # Delegate everything else to calc14 (which handles factor, divpoly, complsq,
-    # binom, equations, systems with ;, and falls through to expressions)
-    return calc14(expression)
+    # No inequality operators found -- fall through to calc12
+    from calc.algebra import calc12
+    return calc12(expression)

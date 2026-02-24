@@ -4,7 +4,7 @@ from fractions import Fraction
 
 from calc.registry import register
 from calc.core import format_complex
-from calc.numtheory import Calculator10
+from calc.polyineq import Calculator16
 
 
 def _clean_float(x, decimals=10):
@@ -258,15 +258,19 @@ class Matrix:
         ]
 
 
-class Calculator11(Calculator10):
+class Calculator19(Calculator16):
     """Matrices and vectors: arithmetic, determinant, inverse, dot/cross product."""
 
     MATRIX_FUNCTIONS = {'det', 'inv', 'trans', 'trace', 'rref'}
     VECTOR_FUNCTIONS = {'dot', 'cross'}
 
     def __init__(self, expression):
+        # Tokenize with support for '[' and ']' for matrix/vector literals
         self.exp = []
         self.idx = 0
+        self._var_name = None
+        self._var_names = set()
+        self._multi_mode = False
         i = 0
         while i < len(expression):
             c = expression[i]
@@ -278,6 +282,7 @@ class Calculator11(Calculator10):
                     j += 1
                     while j < len(expression) and expression[j] >= '0' and expression[j] <= '9':
                         j += 1
+                # Scientific notation
                 if j < len(expression) and expression[j] in ('e', 'E'):
                     k = j + 1
                     if k < len(expression) and expression[k] in ('+', '-'):
@@ -289,7 +294,8 @@ class Calculator11(Calculator10):
                 num_str = expression[i:j]
                 # Degree suffix: number followed by 'd'
                 if j < len(expression) and expression[j] == 'd' and (j + 1 >= len(expression) or not expression[j + 1].isalpha()):
-                    val = float(num_str) * math.pi / 180
+                    import math as _math
+                    val = float(num_str) * _math.pi / 180
                     self.exp.append(str(val))
                     j += 1
                 else:
@@ -301,6 +307,13 @@ class Calculator11(Calculator10):
                     j += 1
                 self.exp.append(expression[i:j])
                 i = j
+            elif c in ('<', '>'):
+                if i + 1 < len(expression) and expression[i + 1] == '=':
+                    self.exp.append(c + '=')
+                    i += 2
+                else:
+                    self.exp.append(c)
+                    i += 1
             elif c in ('+', '-', '*', '/', '^', '(', ')', ',', '[', ']', '!', '%'):
                 self.exp.append(c)
                 i += 1
@@ -511,7 +524,7 @@ class Calculator11(Calculator10):
 
 
 def _format_matrix_result(value):
-    """Format a calc11 result for output."""
+    """Format a calc19 result for output."""
     if isinstance(value, Matrix):
         cleaned = Matrix([
             [_clean_float(value.data[i][j]) for j in range(value.cols)]
@@ -535,13 +548,13 @@ def _format_scalar(x):
     return str(x)
 
 
-@register("calc11", description="Matrix arithmetic, determinant, inverse, transpose, dot and cross products",
-          short_desc="Matrices", group="expression",
+@register("calc19", description="Matrix arithmetic, determinant, inverse, transpose, dot and cross products",
+          short_desc="Vectors & Matrices", group="expression",
           examples=["det([[1,2],[3,4]])", "inv([[2,1],[1,1]])", "dot([1,2,3],[4,5,6])", "[[1,2],[3,4]]*[[5,6],[7,8]]"],
           i18n={"zh": "\u77e9\u9635\u8fd0\u7b97", "hi": "\u0906\u0935\u094d\u092f\u0942\u0939", "es": "Matrices", "fr": "Matrices", "ar": "\u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0627\u062a", "pt": "Matrizes", "ru": "\u041c\u0430\u0442\u0440\u0438\u0446\u044b", "ja": "\u884c\u5217", "de": "Matrizen"})
-def calc11(expression):
+def calc19(expression):
     """Matrices and vectors."""
-    calculator = Calculator11(expression)
+    calculator = Calculator19(expression)
     result = calculator.Parse()
     if isinstance(result, (int, float, complex)) and not isinstance(result, bool):
         return format_complex(result)

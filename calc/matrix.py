@@ -2,6 +2,7 @@ import math
 import fractions
 from fractions import Fraction
 
+from calc.registry import register
 from calc.core import format_complex
 from calc.numtheory import Calculator10
 
@@ -535,6 +536,10 @@ def _format_scalar(x):
     return str(x)
 
 
+@register("calc11", description="Matrix arithmetic, determinant, inverse, transpose, dot and cross products",
+          short_desc="Matrices", group="expression",
+          examples=["det([[1,2],[3,4]])", "inv([[2,1],[1,1]])", "dot([1,2,3],[4,5,6])", "[[1,2],[3,4]]*[[5,6],[7,8]]"],
+          i18n={"zh": "\u77e9\u9635\u8fd0\u7b97", "hi": "\u0906\u0935\u094d\u092f\u0942\u0939", "es": "Matrices", "fr": "Matrices", "ar": "\u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0627\u062a", "pt": "Matrizes", "ru": "\u041c\u0430\u0442\u0440\u0438\u0446\u044b", "ja": "\u884c\u5217", "de": "Matrizen"})
 def calc11(expression, symbolic=False):
     """Matrices and vectors."""
     calculator = Calculator11(expression, symbolic=symbolic)

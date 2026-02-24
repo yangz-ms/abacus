@@ -31,23 +31,7 @@
   /* ============================================================
    * DEFAULT CALCULATORS (fallback when API is down)
    * ============================================================ */
-  var DEFAULT_CALCS = [
-    { id: "calc1",  name: "calc1",  desc: "Add & Subtract",          group: "expression", examples: ["1+2+3", "123-456", "123+456-789"] },
-    { id: "calc2",  name: "calc2",  desc: "Multiply & Divide",       group: "expression", examples: ["1+2*3-4", "123+456*789", "1*2*3*4*5/6"] },
-    { id: "calc3",  name: "calc3",  desc: "Parentheses & Exponents", group: "expression", examples: ["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"] },
-    { id: "calc4",  name: "calc4",  desc: "Scientific Notation",     group: "expression", examples: ["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"] },
-    { id: "calc5",  name: "calc5",  desc: "Constants (pi, e)",       group: "expression", examples: ["2*pi", "e^2", "pi+e"] },
-    { id: "calc6",  name: "calc6",  desc: "Complex Numbers",         group: "expression", examples: ["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"] },
-    { id: "calc7",  name: "calc7",  desc: "Math Functions",          group: "expression", examples: ["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"] },
-    { id: "calc8",  name: "calc8",  desc: "Number Theory",           group: "expression", examples: ["gcd(12,8)", "5!", "factor(60)", "17%3", "floor(3.7)"] },
-    { id: "calc9",  name: "calc9",  desc: "Combinatorics",           group: "expression", examples: ["C(10,3)", "P(5,2)", "C(52,5)"] },
-    { id: "calc10", name: "calc10", desc: "Trig & Logs",             group: "expression", examples: ["sin(90d)", "sec(pi/4)", "logb(2,8)", "polar(3,4)"] },
-    { id: "calc11", name: "calc11", desc: "Matrices",                group: "expression", examples: ["det([[1,2],[3,4]])", "inv([[2,1],[1,1]])", "dot([1,2,3],[4,5,6])"] },
-    { id: "calc12", name: "calc12", desc: "Algebra & Equations",     group: "solver",     examples: ["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"] },
-    { id: "calc13", name: "calc13", desc: "Linear Systems",          group: "solver",     examples: ["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"] },
-    { id: "calc14", name: "calc14", desc: "Poly Tools",              group: "solver",     examples: ["factor(x^2-5*x+6)", "divpoly(x^3-1,x-1)", "complsq(x^2+6*x+5)", "x^4-1=0"] },
-    { id: "calc15", name: "calc15", desc: "Ineq & Conics",           group: "solver",     examples: ["x^2-4>0", "abs(x-2)<=5", "conic(x^2+y^2-25)"] }
-  ];
+  var DEFAULT_CALCS = [];
 
   /* ============================================================
    * STATE
@@ -75,6 +59,23 @@
 
   function flagUrl(code) {
     return FLAG_URL + code + ".png";
+  }
+
+  function _mergeCalcI18n(calculators) {
+    for (var i = 0; i < calculators.length; i++) {
+      var c = calculators[i];
+      var key = c.id + "_desc";
+      // Set English desc from short_desc
+      if (TRANSLATIONS.en) {
+        TRANSLATIONS.en[key] = c.desc;
+      }
+      if (!c.i18n) continue;
+      for (var lang in c.i18n) {
+        if (c.i18n.hasOwnProperty(lang) && TRANSLATIONS[lang]) {
+          TRANSLATIONS[lang][key] = c.i18n[lang];
+        }
+      }
+    }
   }
 
   /* ============================================================
@@ -461,16 +462,11 @@
   applyTranslations();
   initGroupTabs();
 
-  // Translate the description for the initially-selected calc
-  calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
-
   // Wire up click handlers on the static HTML pills and example chips
   // so the page is fully interactive without any DOM rebuild.
   attachHandlers();
 
-  // Fetch calculators from API; update data only, never touch the DOM.
-  // The static HTML pills and examples stay as-is on initial load.
-  // DOM is only rebuilt on user interaction (pill click, language change).
+  // Fetch calculators from API and populate the UI dynamically.
   fetch("/api/calculators")
     .then(function(res) { return res.json(); })
     .then(function(data) {
@@ -483,9 +479,11 @@
           name: d.name,
           desc: d.short_desc || d.description,
           group: d.group || "expression",
-          examples: d.examples || []
+          examples: d.examples || [],
+          i18n: d.i18n || {}
         });
       }
+      _mergeCalcI18n(calcs);
       currentCalc = calcs[0];
       buildPills();
     })

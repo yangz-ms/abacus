@@ -2,6 +2,7 @@ import math
 import cmath
 from fractions import Fraction
 
+from calc.registry import register
 from calc.helpers import _to_int, _clean_root, _unique_roots, _sort_roots, _format_solution
 from calc.numtheory import _prime_factors, _format_factors
 from calc.matrix import Matrix, _format_matrix_result
@@ -548,6 +549,10 @@ class Calculator14(Calculator13):
 # calc14() entry function
 # ---------------------------------------------------------------------------
 
+@register("calc14", description="Polynomial factoring, long division, completing the square, binomial expansion, higher-degree equation solving",
+          short_desc="Poly Tools", group="solver",
+          examples=["factor(x^2-5*x+6)", "divpoly(x^3-1,x-1)", "complsq(x^2+6*x+5)", "binom(x+2,5)", "x^4-1=0"],
+          i18n={"zh": "\u591a\u9879\u5f0f\u5de5\u5177", "hi": "\u092c\u0939\u0941\u092a\u0926 \u0909\u092a\u0915\u0930\u0923", "es": "Herr. Polinomios", "fr": "Outils Polyn\u00f4mes", "ar": "\u0623\u062f\u0648\u0627\u062a \u0643\u062b\u064a\u0631\u0627\u062a \u0627\u0644\u062d\u062f\u0648\u062f", "pt": "Ferr. Polin\u00f4mios", "ru": "\u041f\u043e\u043b\u0438\u043d\u043e\u043c\u044b", "ja": "\u591a\u9805\u5f0f\u30c4\u30fc\u30eb", "de": "Polynom-Werkzeuge"})
 def calc14(expression, symbolic=False):
     """Polynomial tools: factor, long division, completing the square,
     binomial expansion, higher-degree equation solving."""

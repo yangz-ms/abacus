@@ -1,6 +1,7 @@
 import math
 import cmath
 
+from calc.registry import register
 from calc.core import format_complex
 from calc.helpers import _to_int, _fmt_num, _cbrt, _clean_root, _unique_roots, _sort_roots, _format_solution
 from calc.matrix import Calculator11, Matrix, _clean_float, _format_matrix_result
@@ -474,6 +475,10 @@ class Calculator12(Calculator11):
         return result
 
 
+@register("calc12", description="Algebra: simplify expressions and solve equations",
+          short_desc="Algebra & Equations", group="solver",
+          examples=["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"],
+          i18n={"zh": "\u4ee3\u6570\u4e0e\u65b9\u7a0b", "hi": "\u092c\u0940\u091c\u0917\u0923\u093f\u0924 \u0914\u0930 \u0938\u092e\u0940\u0915\u0930\u0923", "es": "\u00c1lgebra y Ecuaciones", "fr": "Alg\u00e8bre et \u00c9quations", "ar": "\u0627\u0644\u062c\u0628\u0631 \u0648\u0627\u0644\u0645\u0639\u0627\u062f\u0644\u0627\u062a", "pt": "\u00c1lgebra e Equa\u00e7\u00f5es", "ru": "\u0410\u043b\u0433\u0435\u0431\u0440\u0430 \u0438 \u0443\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u044f", "ja": "\u4ee3\u6570\u3068\u65b9\u7a0b\u5f0f", "de": "Algebra und Gleichungen"})
 def calc12(expression, symbolic=False):
     '''
     Extends calc7 to support single-variable algebra and equation solving.

@@ -5,6 +5,7 @@ symbolic mode, and performance.
 
 import time
 import sys
+import os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from calc import (calc3, calc7, calc8, calc9, calc10, calc11,
                   calc12, calc13, calc14, calc15)
 

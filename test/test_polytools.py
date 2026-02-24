@@ -1,3 +1,4 @@
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from calc import calc14, Radical, factor_polynomial, poly_divide, complete_square, binom_expand, Polynomial
 from test_helper import test
 

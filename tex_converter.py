@@ -100,8 +100,7 @@ _FUNCTIONS = {'sin', 'cos', 'tan', 'asin', 'acos', 'atan',
               'gcd', 'lcm', 'factor', 'floor', 'ceil', 'round', 'isprime',
               'C', 'P', 'sec', 'csc', 'cot', 'logb', 'polar', 'rect',
               'divpoly', 'complsq', 'binom',
-              'det', 'inv', 'trans', 'trace', 'dot', 'cross', 'rref',
-              'conic'}
+              'det', 'inv', 'trans', 'trace', 'dot', 'cross', 'rref'}
 
 _TEX_FUNCTIONS = {'sin': r'\sin', 'cos': r'\cos', 'tan': r'\tan',
                   'asin': r'\arcsin', 'acos': r'\arccos', 'atan': r'\arctan',
@@ -363,18 +362,21 @@ def _tokens_to_tex(tokens, calculator):
                     result.append('^{' + inner_tex + '}')
                     i = j + 1
                 elif i < len(tokens):
-                    # Single token exponent
+                    # Single token exponent — check for chained ^
                     exp_tok = tokens[i]
                     if exp_tok['type'] == 'number':
-                        result.append('^{' + exp_tok['value'] + '}')
+                        exp_tex = exp_tok['value']
                     elif exp_tok['type'] == 'ident':
-                        if exp_tok['value'] in _CONSTANTS:
-                            result.append('^{' + _CONSTANTS[exp_tok['value']] + '}')
-                        else:
-                            result.append('^{' + exp_tok['value'] + '}')
+                        exp_tex = _CONSTANTS.get(exp_tok['value'], exp_tok['value'])
                     else:
-                        result.append('^{' + exp_tok['value'] + '}')
+                        exp_tex = exp_tok['value']
                     i += 1
+                    # Handle chained exponents: 2^2^2 -> 2^{2^{2}}
+                    if i < len(tokens) and tokens[i]['value'] == '^':
+                        rest_tex = _tokens_to_tex(tokens[i:], calculator)
+                        exp_tex = exp_tex + rest_tex
+                        i = len(tokens)
+                    result.append('^{' + exp_tex + '}')
 
             elif op == '+':
                 result.append(' + ')
@@ -604,12 +606,8 @@ def _calc15_output_to_tex(result):
         return r'(-\infty, \infty)'
 
     # Interval notation: e.g. "(-inf,-2) U (2,inf)", "[-2,2]", "(2,inf)"
-    if any(c in result for c in ('(', '[')) and any(c in result for c in (')', ']')) and 'Circle' not in result and 'Ellipse' not in result and 'Hyperbola' not in result and 'Parabola' not in result:
+    if any(c in result for c in ('(', '[')) and any(c in result for c in (')', ']')):
         return _interval_to_tex(result)
-
-    # Conic section output
-    if result.startswith(('Circle:', 'Ellipse:', 'Hyperbola:', 'Parabola:')):
-        return _conic_output_to_tex(result)
 
     # Fallthrough: polynomial or number
     return _output_value_to_tex(result)
@@ -630,14 +628,6 @@ def _interval_to_tex(result):
     return r' \cup '.join(tex_parts)
 
 
-def _conic_output_to_tex(result):
-    """Convert conic section output to LaTeX."""
-    # Convert ^2 to ^{2}
-    result = re.sub(r'\)\^2', r')^{2}', result)
-    result = re.sub(r'([a-z])\^2', r'\1^{2}', result)
-    return result
-
-
 if __name__ == '__main__':
     # -- input_to_tex tests --
 
@@ -652,6 +642,8 @@ if __name__ == '__main__':
     # calc3: parentheses and powers
     assert input_to_tex("1+2*(3-4)", "calc3") == r"1 + 2 \times (3 - 4)"
     assert input_to_tex("(3^5+2)/(7*7)", "calc3") == r"(3^{5} + 2) / (7 \times 7)"
+    assert input_to_tex("2^2^2", "calc3") == "2^{2^{2}}"
+    assert input_to_tex("2^3^4", "calc3") == "2^{3^{4}}"
 
     # calc4: scientific notation
     assert input_to_tex("1.5e3*2", "calc4") == r"1.5 \times 10^{3} \times 2"
@@ -751,7 +743,6 @@ if __name__ == '__main__':
     assert input_to_tex("x^2-4<=0", "calc15") == r"x^{2} - 4 \leq 0"
     assert input_to_tex("abs(x-2)<=5", "calc15") == r"|x - 2| \leq 5"
     assert input_to_tex("1<2*x+3<7", "calc15") == "1 < 2x + 3 < 7"
-    assert input_to_tex("conic(x^2+y^2-25)", "calc15") == r"\mathrm{conic}(x^{2} + y^{2} - 25)"
 
     # calc15: inequality/interval output
     assert output_to_tex("(2,inf)", "calc15") == r"(2, \infty)"

@@ -1,3 +1,4 @@
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from calc import calc15
 from test_helper import test
 
@@ -37,22 +38,6 @@ if __name__ == '__main__':
     # Constant inequalities
     test("3>2", "(-inf,inf)", calc15)
     test("1>2", "no solution", calc15)
-
-    # Conic sections - circle
-    test("conic(x^2+y^2-25)", "Circle: x^2+y^2=25, center=(0,0), radius=5", calc15)
-    test("conic(x^2+y^2-6*x+4*y-12)", "Circle: (x-3)^2+(y+2)^2=25, center=(3,-2), radius=5", calc15)
-
-    # Conic sections - ellipse
-    test("conic(x^2/9+y^2/4-1)", "Ellipse: x^2/9+y^2/4=1, center=(0,0), a=3, b=2", calc15)
-    test("conic(x^2+4*y^2-16)", "Ellipse: x^2/16+y^2/4=1, center=(0,0), a=4, b=2", calc15)
-
-    # Conic sections - hyperbola
-    test("conic(x^2-y^2-1)", "Hyperbola: x^2/1-y^2/1=1, center=(0,0), a=1, b=1", calc15)
-    test("conic(x^2/16-y^2/9-1)", "Hyperbola: x^2/16-y^2/9=1, center=(0,0), a=4, b=3", calc15)
-
-    # Conic sections - parabola
-    test("conic(y^2-4*x)", "Parabola: y^2=4*(x-0), vertex=(0,0), p=1, opens right", calc15)
-    test("conic(x^2+2*y)", "Parabola: x^2=-2*(y-0), vertex=(0,0), p=-0.5, opens down", calc15)
 
     # Fallthrough to parent calculator
     test("2+3", "5", calc15)

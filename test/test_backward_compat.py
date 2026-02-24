@@ -13,6 +13,7 @@ This test suite:
 """
 
 import sys
+import os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from calc import (
     calc1, calc2, calc3, calc4, calc5, calc6, calc7, calc8, calc9,
@@ -317,7 +318,7 @@ TESTS = {
         "x^3-6*x^2+11*x-6=0",
     ],
 
-    # ---- calc15: inequalities and conic sections ----
+    # ---- calc15: inequalities ----
     15: [
         # Linear inequalities
         "2*x+3>7",
@@ -349,18 +350,6 @@ TESTS = {
         # Constant inequalities
         "3>2",
         "1>2",
-        # Conic sections - circle
-        "conic(x^2+y^2-25)",
-        "conic(x^2+y^2-6*x+4*y-12)",
-        # Conic sections - ellipse
-        "conic(x^2/9+y^2/4-1)",
-        "conic(x^2+4*y^2-16)",
-        # Conic sections - hyperbola
-        "conic(x^2-y^2-1)",
-        "conic(x^2/16-y^2/9-1)",
-        # Conic sections - parabola
-        "conic(y^2-4*x)",
-        "conic(x^2+2*y)",
         # Fallthrough to parent calculator
         "2+3",
         "x+1",

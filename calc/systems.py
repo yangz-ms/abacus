@@ -1,5 +1,6 @@
 import math
 
+from calc.registry import register
 from calc.helpers import _to_int, _format_solution
 from calc.matrix import Calculator11, Matrix, _clean_float, _format_matrix_result
 from calc.algebra import Polynomial, Calculator12, _unwrap_poly, _unwrap_matrix, _unwrap_vector
@@ -512,6 +513,10 @@ def _promote_to_multi_poly(value):
     return value
 
 
+@register("calc13", description="Multi-variable linear equation systems",
+          short_desc="Linear Systems", group="solver",
+          examples=["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"],
+          i18n={"zh": "\u7ebf\u6027\u65b9\u7a0b\u7ec4", "hi": "\u0930\u0948\u0916\u093f\u0915 \u0938\u092e\u0940\u0915\u0930\u0923 \u0928\u093f\u0915\u093e\u092f", "es": "Sistemas Lineales", "fr": "Syst\u00e8mes Lin\u00e9aires", "ar": "\u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u062e\u0637\u064a\u0629", "pt": "Sistemas Lineares", "ru": "\u041b\u0438\u043d\u0435\u0439\u043d\u044b\u0435 \u0441\u0438\u0441\u0442\u0435\u043c\u044b", "ja": "\u9023\u7acb\u4e00\u6b21\u65b9\u7a0b\u5f0f", "de": "Lineare Systeme"})
 def calc13(expression, symbolic=False):
     '''
     Extends calc12 to support multi-variable linear algebra.

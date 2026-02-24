@@ -9,6 +9,7 @@ from calc.algebra import *
 from calc.systems import *
 from calc.polytools import *
 from calc.inequalities import *
+from calc.tex import *
 
 
 def get_registry():

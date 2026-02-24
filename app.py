@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from calc import get_registry
-from tex_converter import input_to_tex, output_to_tex
+from calc.tex import input_to_tex, output_to_tex
 
 app = FastAPI()
 

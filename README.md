@@ -17,6 +17,7 @@ calc/
   systems.py         MultiPolynomial, Calculator13, calc13, solve_linear_system
   polytools.py       Radical, factor_polynomial, poly_divide, Calculator14, calc14
   inequalities.py    Interval, solve_inequality, Calculator15, calc15
+  tex.py             input_to_tex, output_to_tex (LaTeX conversion)
 ```
 
 Tests mirror the calc/ structure:
@@ -30,6 +31,8 @@ test/
   test_systems.py        calc13 tests
   test_polytools.py      calc14 tests (Radical, factoring, division, etc.)
   test_inequalities.py   calc15 tests (inequalities)
+  test_tex.py            LaTeX conversion tests
+  test_web.py            API endpoint and concurrency tests
   test_inheritance.py    cross-calculator inheritance, edge cases, performance
   test_backward_compat.py backward compatibility matrix (1140 checks)
 ```
@@ -110,7 +113,7 @@ python test/test_algebra.py
 python test/test_systems.py
 python test/test_polytools.py
 python test/test_inequalities.py
+python test/test_tex.py
 python test/test_inheritance.py
 python test/test_backward_compat.py
-python tex_converter.py
 ```

@@ -1,10 +1,9 @@
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import json
 import time
 import subprocess
-import sys
 
-# Test the TeX converter directly
-from tex_converter import input_to_tex, output_to_tex
+from calc.tex import input_to_tex, output_to_tex
 
 def test_tex_converter():
     """Test TeX conversion for all calculator versions."""
@@ -76,24 +75,24 @@ def test_api():
         req = urllib.request.Request("http://127.0.0.1:8765/api/calculators")
         with urllib.request.urlopen(req) as resp:
             data = json.loads(resp.read())
-            if len(data) == 9:
+            if len(data) == 15:
                 print(f"  PASS GET /api/calculators returned {len(data)} calculators")
                 passed += 1
             else:
-                print(f"  FAIL GET /api/calculators returned {len(data)} calculators, expected 9")
+                print(f"  FAIL GET /api/calculators returned {len(data)} calculators, expected 15")
                 failed += 1
 
         # Test POST /api/calculate for each calculator
         test_cases = [
-            ("calc", "1+2+3", "6"),
+            ("calc1", "1+2+3", "6"),
             ("calc2", "1+2*3-4", "3"),
             ("calc3", "1+2*(3-4)", "-1"),
             ("calc4", "1.5e3*2", "3000.0"),
             ("calc5", "2*pi", "6.283185307179586"),
             ("calc6", "(1+i)*(1-i)", "2"),
             ("calc7", "sin(pi/2)", "1"),
-            ("calc8", "x^2-5*x+6=0", "x=2; x=3"),
-            ("calc9", "x+y=2; x-y=0", "x=1; y=1"),
+            ("calc12", "x^2-5*x+6=0", "x=2; x=3"),
+            ("calc13", "x+y=2; x-y=0", "x=1; y=1"),
         ]
 
         for calc, expr, expected in test_cases:
@@ -136,7 +135,7 @@ def test_api():
         import concurrent.futures
 
         def send_request(i):
-            body = json.dumps({"calculator": "calc", "expression": f"{i}+{i}"}).encode()
+            body = json.dumps({"calculator": "calc1", "expression": f"{i}+{i}"}).encode()
             req = urllib.request.Request(
                 "http://127.0.0.1:8765/api/calculate",
                 data=body,

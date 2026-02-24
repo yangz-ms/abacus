@@ -21,7 +21,8 @@ import os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from calc import (
     calc1, calc2, calc3, calc4, calc5, calc6, calc7, calc8, calc9,
-    calc10, calc11, calc12, calc13, calc14, calc15, calc16, calc19,
+    calc10, calc11, calc12, calc13, calc14, calc15, calc16, calc17,
+    calc18, calc19,
 )
 
 # ---------------------------------------------------------------------------
@@ -31,11 +32,11 @@ CALC_FUNCTIONS = {
     1: calc1,   2: calc2,   3: calc3,   4: calc4,   5: calc5,
     6: calc6,   7: calc7,   8: calc8,   9: calc9,   10: calc10,
     11: calc11, 12: calc12, 13: calc13, 14: calc14, 15: calc15,
-    16: calc16, 19: calc19,
+    16: calc16, 17: calc17, 18: calc18, 19: calc19,
 }
 
 # Ordered list of all levels for iteration
-ALL_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19]
+ALL_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 # ---------------------------------------------------------------------------
 # Test cases grouped by the level they were DESIGNED for.
@@ -351,6 +352,26 @@ TESTS = {
     ],
 
     # ---- calc19: matrix operations ----
+    # ---- calc17: rational expressions ----
+    17: [
+        "simplify(x^2-1,x+1)",
+        "radd(1,x+1,1,x-1)",
+        "rmul(x,x+1,x+1,x-1)",
+        # Fallthrough
+        "2+3",
+        "factor(x^2-1)",
+    ],
+
+    # ---- calc18: radical expressions ----
+    18: [
+        "simplifyrad(50)",
+        "simplifyrad(48)",
+        "rationalize(1,1,2)",
+        "addrad(0,1,2,0,1,8)",
+        # Fallthrough
+        "2+3",
+    ],
+
     19: [
         "det([[1,2],[3,4]])",
         "det([[1,0,0],[0,1,0],[0,0,1]])",
@@ -391,6 +412,8 @@ COMPAT_LEVELS = {
     14: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
     15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
     16: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    17: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    18: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
     19: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
 }
 

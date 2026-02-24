@@ -9,6 +9,8 @@ from calc.inequalities import *
 from calc.systems import *
 from calc.polytools import *
 from calc.polyineq import *
+from calc.rational import *
+from calc.radical import *
 from calc.matrix import *
 from calc.tex import *
 

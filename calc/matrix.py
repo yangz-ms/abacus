@@ -4,7 +4,7 @@ from fractions import Fraction
 
 from calc.registry import register
 from calc.core import format_complex
-from calc.polyineq import Calculator16
+from calc.radical import Calculator18
 
 
 def _clean_float(x, decimals=10):
@@ -258,7 +258,7 @@ class Matrix:
         ]
 
 
-class Calculator19(Calculator16):
+class Calculator19(Calculator18):
     """Matrices and vectors: arithmetic, determinant, inverse, dot/cross product."""
 
     MATRIX_FUNCTIONS = {'det', 'inv', 'trans', 'trace', 'rref'}

@@ -41,6 +41,10 @@
 
   <!-- CALCULATOR SELECTOR -->
   <section class="selector-section">
+    <div class="group-tabs" id="groupTabs">
+      <button class="group-tab active" data-group="expression" data-i18n="group_expression">Expression</button>
+      <button class="group-tab" data-group="solver" data-i18n="group_solver">Solver</button>
+    </div>
     <div class="selector-scroll" id="selectorScroll">
       <button class="calc-pill active" data-id="calc1">calc1</button>
       <button class="calc-pill" data-id="calc2">calc2</button>
@@ -51,6 +55,12 @@
       <button class="calc-pill" data-id="calc7">calc7</button>
       <button class="calc-pill" data-id="calc8">calc8</button>
       <button class="calc-pill" data-id="calc9">calc9</button>
+      <button class="calc-pill" data-id="calc10">calc10</button>
+      <button class="calc-pill" data-id="calc11">calc11</button>
+      <button class="calc-pill" data-id="calc12">calc12</button>
+      <button class="calc-pill" data-id="calc13">calc13</button>
+      <button class="calc-pill" data-id="calc14">calc14</button>
+      <button class="calc-pill" data-id="calc15">calc15</button>
     </div>
     <div class="calc-description" id="calcDescription">Add &amp; Subtract</div>
   </section>
@@ -59,6 +69,11 @@
   <section class="input-section">
     <div class="input-row">
       <input type="text" id="exprInput" data-i18n-placeholder="placeholder" placeholder="Enter an expression..." autocomplete="off" spellcheck="false">
+      <label class="symbolic-toggle" id="symbolicToggle">
+        <input type="checkbox" id="symbolicCheck">
+        <span class="toggle-slider"></span>
+        <span class="toggle-label" data-i18n="symbolic_exact">Exact</span>
+      </label>
       <button class="btn-calc" id="calcBtn" type="button">
         <span class="btn-text" data-i18n="calculate">Calculate</span>
         <span class="spinner"></span>

@@ -16,7 +16,10 @@
         error_label: "Error",
         placeholder: "Enter an expression\u2026",
         footer: "Powered by {0}",
-        conn_error: "Connection error: "
+        conn_error: "Connection error: ",
+        group_expression: "Expression",
+        group_solver: "Solver",
+        symbolic_exact: "Exact"
       }
     }
   };
@@ -29,15 +32,21 @@
    * DEFAULT CALCULATORS (fallback when API is down)
    * ============================================================ */
   var DEFAULT_CALCS = [
-    { id: "calc1", name: "calc1", desc: "Add & Subtract",          examples: ["1+2+3", "123-456", "123+456-789"] },
-    { id: "calc2", name: "calc2", desc: "Multiply & Divide",       examples: ["1+2*3-4", "123+456*789", "1*2*3*4*5/6"] },
-    { id: "calc3", name: "calc3", desc: "Parentheses & Exponents", examples: ["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"] },
-    { id: "calc4", name: "calc4", desc: "Scientific Notation",     examples: ["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"] },
-    { id: "calc5", name: "calc5", desc: "Constants (pi, e)",       examples: ["2*pi", "e^2", "pi+e"] },
-    { id: "calc6", name: "calc6", desc: "Complex Numbers",         examples: ["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"] },
-    { id: "calc7", name: "calc7", desc: "Math Functions",          examples: ["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"] },
-    { id: "calc8", name: "calc8", desc: "Algebra & Equations",     examples: ["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"] },
-    { id: "calc9", name: "calc9", desc: "Linear Systems",          examples: ["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"] }
+    { id: "calc1",  name: "calc1",  desc: "Add & Subtract",          group: "expression", examples: ["1+2+3", "123-456", "123+456-789"] },
+    { id: "calc2",  name: "calc2",  desc: "Multiply & Divide",       group: "expression", examples: ["1+2*3-4", "123+456*789", "1*2*3*4*5/6"] },
+    { id: "calc3",  name: "calc3",  desc: "Parentheses & Exponents", group: "expression", examples: ["2^10", "1+2*(3-4)", "(3^5+2)/(7*7)"] },
+    { id: "calc4",  name: "calc4",  desc: "Scientific Notation",     group: "expression", examples: ["1.5e3*2", "2.5e-3", "(1e2+1.5e2)*2e1"] },
+    { id: "calc5",  name: "calc5",  desc: "Constants (pi, e)",       group: "expression", examples: ["2*pi", "e^2", "pi+e"] },
+    { id: "calc6",  name: "calc6",  desc: "Complex Numbers",         group: "expression", examples: ["i^2", "(1+i)*(1-i)", "(1+i)/(1-i)", "e^(i*pi)"] },
+    { id: "calc7",  name: "calc7",  desc: "Math Functions",          group: "expression", examples: ["sin(pi/2)", "log(100)", "sqrt(4)", "abs(3+4*i)"] },
+    { id: "calc8",  name: "calc8",  desc: "Number Theory",           group: "expression", examples: ["gcd(12,8)", "5!", "factor(60)", "17%3", "floor(3.7)"] },
+    { id: "calc9",  name: "calc9",  desc: "Combinatorics",           group: "expression", examples: ["C(10,3)", "P(5,2)", "C(52,5)"] },
+    { id: "calc10", name: "calc10", desc: "Trig & Logs",             group: "expression", examples: ["sin(90d)", "sec(pi/4)", "logb(2,8)", "polar(3,4)"] },
+    { id: "calc11", name: "calc11", desc: "Matrices",                group: "expression", examples: ["det([[1,2],[3,4]])", "inv([[2,1],[1,1]])", "dot([1,2,3],[4,5,6])"] },
+    { id: "calc12", name: "calc12", desc: "Algebra & Equations",     group: "solver",     examples: ["(x+1)*(x-1)", "(x+1)^2", "x^2-5*x+6=0", "x^3-6*x^2+11*x-6=0"] },
+    { id: "calc13", name: "calc13", desc: "Linear Systems",          group: "solver",     examples: ["3*x+2*y-x", "x+y=2; x-y=0", "x+y+z=6; x-y=0; x+z=4"] },
+    { id: "calc14", name: "calc14", desc: "Poly Tools",              group: "solver",     examples: ["factor(x^2-5*x+6)", "divpoly(x^3-1,x-1)", "complsq(x^2+6*x+5)", "x^4-1=0"] },
+    { id: "calc15", name: "calc15", desc: "Ineq & Conics",           group: "solver",     examples: ["x^2-4>0", "abs(x-2)<=5", "conic(x^2+y^2-25)"] }
   ];
 
   /* ============================================================
@@ -47,6 +56,8 @@
   var currentCalc = calcs[0];
   var currentLang = localStorage.getItem("abacus-lang") || "en";
   var currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+  var currentGroup = "expression";
+  var symbolicOn = localStorage.getItem("abacus-symbolic") === "true";
 
   /* ============================================================
    * HELPERS
@@ -75,10 +86,12 @@
   var langLabel       = document.getElementById("langLabel");
   var langMenu        = document.getElementById("langMenu");
   var themeToggle     = document.getElementById("themeToggle");
+  var groupTabs       = document.getElementById("groupTabs");
   var selectorScroll  = document.getElementById("selectorScroll");
   var calcDescription = document.getElementById("calcDescription");
   var exprInput       = document.getElementById("exprInput");
   var calcBtn         = document.getElementById("calcBtn");
+  var symbolicCheck   = document.getElementById("symbolicCheck");
   var examplesRow     = document.getElementById("examplesRow");
   var outputSection   = document.getElementById("outputSection");
   var outputContent   = document.getElementById("outputContent");
@@ -99,6 +112,17 @@
   });
 
   applyTheme();
+
+  /* ============================================================
+   * SYMBOLIC TOGGLE
+   * ============================================================ */
+  if (symbolicCheck) {
+    symbolicCheck.checked = symbolicOn;
+    symbolicCheck.addEventListener("change", function() {
+      symbolicOn = symbolicCheck.checked;
+      localStorage.setItem("abacus-symbolic", symbolicOn ? "true" : "false");
+    });
+  }
 
   /* ============================================================
    * LANGUAGE DROPDOWN
@@ -192,6 +216,42 @@
   }
 
   /* ============================================================
+   * GROUP TABS
+   * ============================================================ */
+  function initGroupTabs() {
+    if (!groupTabs) return;
+    var tabs = groupTabs.querySelectorAll(".group-tab");
+    for (var i = 0; i < tabs.length; i++) {
+      (function(tab) {
+        tab.addEventListener("click", function() {
+          currentGroup = tab.getAttribute("data-group");
+          for (var j = 0; j < tabs.length; j++) {
+            if (tabs[j].getAttribute("data-group") === currentGroup) {
+              tabs[j].className = "group-tab active";
+            } else {
+              tabs[j].className = "group-tab";
+            }
+          }
+          buildPills();
+          // Select first calc in new group if current is not in this group
+          if (currentCalc && currentCalc.group !== currentGroup) {
+            var filtered = calcsForGroup(currentGroup);
+            if (filtered.length > 0) selectCalc(filtered[0]);
+          }
+        });
+      })(tabs[i]);
+    }
+  }
+
+  function calcsForGroup(group) {
+    var result = [];
+    for (var i = 0; i < calcs.length; i++) {
+      if (calcs[i].group === group) result.push(calcs[i]);
+    }
+    return result;
+  }
+
+  /* ============================================================
    * PILLS & CALCULATOR SELECTION
    * ============================================================ */
 
@@ -229,8 +289,9 @@
   // Full rebuild — only called after fetch succeeds or language changes.
   function buildPills() {
     if (calcs.length === 0) return;
+    var filtered = calcsForGroup(currentGroup);
     selectorScroll.innerHTML = "";
-    for (var i = 0; i < calcs.length; i++) {
+    for (var i = 0; i < filtered.length; i++) {
       (function(c) {
         var pill = document.createElement("button");
         pill.className = "calc-pill";
@@ -239,7 +300,7 @@
         pill.setAttribute("data-id", c.id);
         pill.addEventListener("click", function() { selectCalc(c); });
         selectorScroll.appendChild(pill);
-      })(calcs[i]);
+      })(filtered[i]);
     }
     if (currentCalc) {
       calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
@@ -337,7 +398,7 @@
     fetch("/api/calculate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ calculator: currentCalc.id, expression: expr })
+      body: JSON.stringify({ calculator: currentCalc.id, expression: expr, symbolic: symbolicOn })
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
@@ -398,6 +459,7 @@
    * ============================================================ */
   buildLangMenu();
   applyTranslations();
+  initGroupTabs();
 
   // Translate the description for the initially-selected calc
   calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
@@ -420,10 +482,12 @@
           id: d.id || d.name,
           name: d.name,
           desc: d.short_desc || d.description,
+          group: d.group || "expression",
           examples: d.examples || []
         });
       }
       currentCalc = calcs[0];
+      buildPills();
     })
     ["catch"](function() {
       // API unavailable — static HTML stays as-is

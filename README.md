@@ -1,6 +1,25 @@
 # Abacus
 Simple calculator built incrementally, from basic arithmetic to symbolic algebra.
 
+## Project Structure
+
+The calculator is organized as a Python package under `calc/`, split into submodules along the inheritance chain:
+
+```
+calc/
+  __init__.py      Re-exports all public names
+  core.py          calc1-7, Calculator3-7, format_complex, _format_result
+  helpers.py       _to_int, _fmt_num, _cbrt, _clean_root, _unique_roots, _sort_roots, _format_solution
+  numtheory.py     Calculator8-10, calc8-10, _prime_factors, _format_factors, _isprime
+  matrix.py        Matrix, Calculator11, calc11, _clean_float, _format_matrix_result
+  algebra.py       Polynomial, Calculator12, calc12, _unwrap helpers
+  systems.py       MultiPolynomial, Calculator13, calc13, solve_linear_system
+  polytools.py     Radical, factor_polynomial, poly_divide, complete_square, Calculator14, calc14
+  ineqconics.py    Interval, solve_inequality, classify_conic, Calculator15, calc15
+```
+
+All imports work the same as before: `from calc import calc1, calc15, Polynomial, Matrix`.
+
 ## Versions
 
 | Version | Description |
@@ -12,50 +31,49 @@ Simple calculator built incrementally, from basic arithmetic to symbolic algebra
 | calc5   | Named constants (pi, e) |
 | calc6   | Imaginary unit and complex numbers |
 | calc7   | Math functions (sin, cos, tan, exp, ln, log, sqrt, abs, etc.) |
-| calc8   | Single-variable algebra and equation solving (linear, quadratic, cubic) |
-| calc9   | Multi-variable linear equations (up to 3 variables) |
+| calc8   | Number theory: gcd, lcm, factorial, modulo, prime factorization, rounding |
+| calc9   | Combinatorics: permutations (P) and combinations (C) |
+| calc10  | Extended trig (degree mode, sec/csc/cot), arbitrary-base log, polar/rect |
+| calc11  | Matrices and vectors: arithmetic, determinant, inverse, dot/cross product |
+| calc12  | Single-variable algebra and equation solving (linear, quadratic, cubic) |
+| calc13  | Multi-variable linear equations (up to 3 variables) |
+| calc14  | Polynomial tools: factoring, long division, completing the square, binomial expansion |
+| calc15  | Inequalities (linear/quadratic/absolute value) and conic section classification |
 
 ## Examples
 
 ```
 calc1("1+2+3")                       → "6"
-calc1("123-456")                     → "-333"
-calc1("123+456-789")                 → "-210"
-
 calc2("1+2*3-4")                     → "3"
-calc2("123+456*789")                 → "359907"
-calc2("1*2*3*4*5/6")                 → "20.0"
-
-calc3("2^10")                        → "1024"
 calc3("1+2*(3-4)")                   → "-1"
-calc3("(3^5+2)/(7*7)")               → "5.0"
-
 calc4("1.5e3*2")                     → "3000.0"
-calc4("2.5e-3")                      → "0.0025"
-calc4("(1e2+1.5e2)*2e1")             → "5000.0"
-
 calc5("2*pi")                        → "6.283185307179586"
-calc5("e^2")                         → "7.3890560989306495"
-calc5("pi+e")                        → "5.859874482048838"
-
-calc6("i^2")                         → "-1"
-calc6("(1+i)*(1-i)")                 → "2"
-calc6("(1+i)/(1-i)")                 → "i"
 calc6("e^(i*pi)")                    → "-1"
-
 calc7("sin(pi/2)")                   → "1"
-calc7("log(100)")                    → "2"
-calc7("sqrt(4)")                     → "2"
-calc7("abs(3+4*i)")                  → "5"
 
-calc8("(x+1)*(x-1)")                → "x^2-1"
-calc8("(x+1)^2")                    → "x^2+2*x+1"
-calc8("x^2-5*x+6=0")               → "x=2; x=3"
-calc8("x^3-6*x^2+11*x-6=0")        → "x=1; x=2; x=3"
+calc8("5!")                          → "120"
+calc8("gcd(12,8)")                   → "4"
+calc8("factor(60)")                  → "2^2*3*5"
+calc9("C(10,3)")                     → "120"
+calc10("sin(90d)")                   → "1"
+calc10("logb(2,1024)")               → "10"
 
-calc9("3*x+2*y-x")                  → "2*x+2*y"
-calc9("x+y=2; x-y=0")              → "x=1; y=1"
-calc9("x+y+z=6; x-y=0; x+z=4")    → "x=2; y=2; z=2"
+calc11("det([[1,2],[3,4]])")         → "-2"
+calc11("cross([1,0,0],[0,1,0])")     → "[0,0,1]"
+
+calc12("(x+1)*(x-1)")               → "x^2-1"
+calc12("x^2-5*x+6=0")              → "x=2; x=3"
+
+calc13("x+y=2; x-y=0")             → "x=1; y=1"
+calc13("x+y+z=6; x-y=0; x+z=4")   → "x=2; y=2; z=2"
+
+calc14("factor(x^3-6*x^2+11*x-6)") → "(x-1)*(x-2)*(x-3)"
+calc14("complsq(x^2+6*x+5)")       → "(x+3)^2-4"
+calc14("binom(x+1,3)")             → "x^3+3*x^2+3*x+1"
+
+calc15("x^2-4>0")                   → "(-inf,-2) U (2,inf)"
+calc15("abs(x-3)<5")                → "(-2,8)"
+calc15("conic(x^2+y^2-25)")         → "Circle: x^2+y^2=25, center=(0,0), radius=5"
 ```
 
 ## Web UI
@@ -72,6 +90,10 @@ Then open http://localhost:8000.
 ## Run tests
 
 ```
-python -X utf8 test_calc.py
-python -X utf8 tex_converter.py
+python test_calc.py
+python test_calc14.py
+python test_calc15.py
+python test_inheritance.py
+python test_backward_compat.py
+python tex_converter.py
 ```

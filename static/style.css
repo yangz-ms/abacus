@@ -240,6 +240,41 @@ header p {
   transform: translateY(-1px);
 }
 
+/* ===== GROUP TABS ===== */
+.group-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.group-tab {
+  padding: 6px 20px;
+  border-radius: 100px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition), box-shadow var(--transition), background var(--transition);
+  user-select: none;
+}
+
+.group-tab:hover {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+}
+
+.group-tab.active {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--glow-soft);
+}
+
 /* ===== CALCULATOR SELECTOR ===== */
 .selector-section {
   margin-bottom: 28px;
@@ -380,6 +415,64 @@ header p {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===== SYMBOLIC TOGGLE ===== */
+.symbolic-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.symbolic-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform var(--transition), background var(--transition);
+}
+
+.symbolic-toggle input:checked + .toggle-slider {
+  background: var(--accent-start);
+  border-color: var(--accent-start);
+}
+
+.symbolic-toggle input:checked + .toggle-slider::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.toggle-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--transition);
+}
+
+.symbolic-toggle:hover .toggle-label {
+  color: var(--text-primary);
 }
 
 /* ===== EXAMPLES ===== */

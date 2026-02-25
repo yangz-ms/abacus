@@ -1,6 +1,6 @@
 import asyncio
+import multiprocessing
 import os
-from concurrent.futures import ProcessPoolExecutor
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,18 +24,49 @@ app.add_middleware(
 
 CALCULATORS = get_registry()
 
-# Limit concurrent calculations so heavy requests can't saturate the server
+_CALC_TIMEOUT = 5.0
 _MAX_CONCURRENT = 4
 _calc_semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
-_process_pool = ProcessPoolExecutor(max_workers=_MAX_CONCURRENT)
 
 
-def _run_calc(calculator_id, expression):
-    """Run a calculation in a worker process (isolated from the main event loop)."""
-    from calc import get_registry
-    registry = get_registry()
-    func = registry[calculator_id]["function"]
-    return func(expression)
+def _worker(calculator_id, expression, result_queue):
+    """Target function for the worker process."""
+    try:
+        from calc import get_registry
+        registry = get_registry()
+        func = registry[calculator_id]["function"]
+        result_queue.put(("ok", func(expression)))
+    except Exception as e:
+        result_queue.put(("error", str(e)))
+
+
+async def _run_calc_with_timeout(calculator_id, expression):
+    """Run calculation in a subprocess that gets killed on timeout."""
+    queue = multiprocessing.Queue()
+    proc = multiprocessing.Process(
+        target=_worker,
+        args=(calculator_id, expression, queue),
+        daemon=True,
+    )
+    proc.start()
+
+    loop = asyncio.get_event_loop()
+    try:
+        # Poll the queue in a thread so we don't block the event loop
+        status, value = await asyncio.wait_for(
+            loop.run_in_executor(None, queue.get, True, _CALC_TIMEOUT + 1),
+            timeout=_CALC_TIMEOUT,
+        )
+    except (asyncio.TimeoutError, Exception):
+        # Kill the process immediately
+        proc.kill()
+        proc.join(timeout=1)
+        raise asyncio.TimeoutError()
+
+    proc.join(timeout=1)
+    if status == "error":
+        raise Exception(value)
+    return value
 
 
 class CalculateRequest(BaseModel):
@@ -64,9 +95,7 @@ async def calculate(request: CalculateRequest):
             error=f"Unknown calculator: {request.calculator}",
         )
 
-    acquired = _calc_semaphore._value > 0
-    if not acquired:
-        # All slots busy — reject immediately instead of queuing
+    if _calc_semaphore._value <= 0:
         return CalculateResponse(
             calculator=request.calculator,
             expression=request.expression,
@@ -78,15 +107,8 @@ async def calculate(request: CalculateRequest):
 
     async with _calc_semaphore:
         try:
-            loop = asyncio.get_event_loop()
-            result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    _process_pool,
-                    _run_calc,
-                    request.calculator,
-                    request.expression,
-                ),
-                timeout=5.0,
+            result = await _run_calc_with_timeout(
+                request.calculator, request.expression
             )
             tex_input = input_to_tex(request.expression, request.calculator)
             tex_output = output_to_tex(result, request.calculator)

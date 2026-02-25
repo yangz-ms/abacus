@@ -85,7 +85,6 @@
   var langMenu        = document.getElementById("langMenu");
   var themeToggle     = document.getElementById("themeToggle");
   var selectorScroll  = document.getElementById("selectorScroll");
-  var calcDescription = document.getElementById("calcDescription");
   var exprInput       = document.getElementById("exprInput");
   var calcBtn         = document.getElementById("calcBtn");
   var examplesRow     = document.getElementById("examplesRow");
@@ -256,14 +255,13 @@
         var pill = document.createElement("button");
         pill.className = "calc-pill";
         if (currentCalc && currentCalc.id === c.id) pill.className += " active";
-        pill.textContent = c.desc || c.name;
+        pill.textContent = t(c.id + "_desc", c.desc || c.name);
         pill.setAttribute("data-id", c.id);
         pill.addEventListener("click", function() { selectCalc(c); });
         selectorScroll.appendChild(pill);
       })(calcs[i]);
     }
     if (currentCalc) {
-      calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
       renderExamples(currentCalc.examples || []);
     }
   }
@@ -278,7 +276,6 @@
         pills[i].className = "calc-pill";
       }
     }
-    calcDescription.textContent = t(c.id + "_desc", c.desc);
     renderExamples(c.examples || []);
     outputSection.classList.remove("visible");
     outputContent.innerHTML = "";

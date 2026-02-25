@@ -307,14 +307,6 @@ header p {
   white-space: nowrap;
 }
 
-.calc-description {
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  min-height: 1.6em;
-  transition: opacity var(--transition), color 0.3s ease;
-}
-
 /* ===== INPUT SECTION ===== */
 .input-section {
   margin-bottom: 28px;

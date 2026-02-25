@@ -18,8 +18,7 @@
         footer: "Powered by {0}",
         conn_error: "Connection error: ",
         group_expression: "Expression",
-        group_solver: "Solver",
-        symbolic_exact: "Exact"
+        group_solver: "Solver"
       }
     }
   };
@@ -41,7 +40,6 @@
   var currentLang = localStorage.getItem("abacus-lang") || "en";
   var currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
   var currentGroup = "expression";
-  var symbolicOn = localStorage.getItem("abacus-symbolic") === "true";
 
   /* ============================================================
    * HELPERS
@@ -92,7 +90,6 @@
   var calcDescription = document.getElementById("calcDescription");
   var exprInput       = document.getElementById("exprInput");
   var calcBtn         = document.getElementById("calcBtn");
-  var symbolicCheck   = document.getElementById("symbolicCheck");
   var examplesRow     = document.getElementById("examplesRow");
   var outputSection   = document.getElementById("outputSection");
   var outputContent   = document.getElementById("outputContent");
@@ -113,17 +110,6 @@
   });
 
   applyTheme();
-
-  /* ============================================================
-   * SYMBOLIC TOGGLE
-   * ============================================================ */
-  if (symbolicCheck) {
-    symbolicCheck.checked = symbolicOn;
-    symbolicCheck.addEventListener("change", function() {
-      symbolicOn = symbolicCheck.checked;
-      localStorage.setItem("abacus-symbolic", symbolicOn ? "true" : "false");
-    });
-  }
 
   /* ============================================================
    * LANGUAGE DROPDOWN
@@ -297,7 +283,7 @@
         var pill = document.createElement("button");
         pill.className = "calc-pill";
         if (currentCalc && currentCalc.id === c.id) pill.className += " active";
-        pill.textContent = c.name;
+        pill.textContent = c.desc || c.name;
         pill.setAttribute("data-id", c.id);
         pill.addEventListener("click", function() { selectCalc(c); });
         selectorScroll.appendChild(pill);
@@ -399,7 +385,7 @@
     fetch("/api/calculate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ calculator: currentCalc.id, expression: expr, symbolic: symbolicOn })
+      body: JSON.stringify({ calculator: currentCalc.id, expression: expr })
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {

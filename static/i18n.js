@@ -40,7 +40,6 @@ window.ABACUS_I18N = {
       conn_error: "Connection error: ",
       group_expression: "Expression",
       group_solver: "Solver",
-      symbolic_exact: "Exact"
     },
 
     zh: {
@@ -55,7 +54,6 @@ window.ABACUS_I18N = {
       conn_error: "\u8fde\u63a5\u9519\u8bef\uff1a",
       group_expression: "\u8868\u8fbe\u5f0f",
       group_solver: "\u6c42\u89e3\u5668",
-      symbolic_exact: "\u7cbe\u786e"
     },
 
     hi: {
@@ -70,7 +68,6 @@ window.ABACUS_I18N = {
       conn_error: "\u0915\u0928\u0947\u0915\u094d\u0936\u0928 \u0924\u094d\u0930\u0941\u091f\u093f: ",
       group_expression: "\u0905\u092d\u093f\u0935\u094d\u092f\u0915\u094d\u0924\u093f",
       group_solver: "\u0938\u0949\u0932\u094d\u0935\u0930",
-      symbolic_exact: "\u0938\u091f\u0940\u0915"
     },
 
     es: {
@@ -85,7 +82,7 @@ window.ABACUS_I18N = {
       conn_error: "Error de conexi\u00f3n: ",
       group_expression: "Expresi\u00f3n",
       group_solver: "Solucionador",
-      symbolic_exact: "Exacto"
+
     },
 
     fr: {
@@ -100,7 +97,6 @@ window.ABACUS_I18N = {
       conn_error: "Erreur de connexion : ",
       group_expression: "Expression",
       group_solver: "Solveur",
-      symbolic_exact: "Exact"
     },
 
     ar: {
@@ -115,7 +111,7 @@ window.ABACUS_I18N = {
       conn_error: "\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0627\u062a\u0635\u0627\u0644: ",
       group_expression: "\u062a\u0639\u0628\u064a\u0631",
       group_solver: "\u062d\u0644\u0651\u0627\u0644",
-      symbolic_exact: "\u062f\u0642\u064a\u0642"
+
     },
 
     pt: {
@@ -130,7 +126,7 @@ window.ABACUS_I18N = {
       conn_error: "Erro de conex\u00e3o: ",
       group_expression: "Express\u00e3o",
       group_solver: "Solucionador",
-      symbolic_exact: "Exato"
+
     },
 
     ru: {
@@ -145,7 +141,7 @@ window.ABACUS_I18N = {
       conn_error: "\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u044f: ",
       group_expression: "\u0412\u044b\u0440\u0430\u0436\u0435\u043d\u0438\u0435",
       group_solver: "\u0420\u0435\u0448\u0430\u0442\u0435\u043b\u044c",
-      symbolic_exact: "\u0422\u043e\u0447\u043d\u043e"
+
     },
 
     ja: {
@@ -160,7 +156,7 @@ window.ABACUS_I18N = {
       conn_error: "\u63a5\u7d9a\u30a8\u30e9\u30fc\uff1a",
       group_expression: "\u5f0f",
       group_solver: "\u30bd\u30eb\u30d0\u30fc",
-      symbolic_exact: "\u6b63\u78ba"
+
     },
 
     de: {
@@ -175,7 +171,7 @@ window.ABACUS_I18N = {
       conn_error: "Verbindungsfehler: ",
       group_expression: "Ausdruck",
       group_solver: "L\u00f6ser",
-      symbolic_exact: "Exakt"
+
     }
 
   }

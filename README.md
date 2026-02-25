@@ -1,6 +1,8 @@
 # Abacus
 Simple calculator built incrementally, from basic arithmetic to symbolic algebra.
 
+![Abacus Screenshot](static/screenshot.png)
+
 ## Versions
 
 | Version | Description |

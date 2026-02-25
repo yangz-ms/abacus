@@ -39,7 +39,6 @@
   var currentCalc = calcs[0];
   var currentLang = localStorage.getItem("abacus-lang") || "en";
   var currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
-  var currentGroup = "expression";
 
   /* ============================================================
    * HELPERS
@@ -85,7 +84,6 @@
   var langLabel       = document.getElementById("langLabel");
   var langMenu        = document.getElementById("langMenu");
   var themeToggle     = document.getElementById("themeToggle");
-  var groupTabs       = document.getElementById("groupTabs");
   var selectorScroll  = document.getElementById("selectorScroll");
   var calcDescription = document.getElementById("calcDescription");
   var exprInput       = document.getElementById("exprInput");
@@ -202,41 +200,6 @@
     footerText.innerHTML = template.replace("{0}", '<span class="accent">Python</span>');
   }
 
-  /* ============================================================
-   * GROUP TABS
-   * ============================================================ */
-  function initGroupTabs() {
-    if (!groupTabs) return;
-    var tabs = groupTabs.querySelectorAll(".group-tab");
-    for (var i = 0; i < tabs.length; i++) {
-      (function(tab) {
-        tab.addEventListener("click", function() {
-          currentGroup = tab.getAttribute("data-group");
-          for (var j = 0; j < tabs.length; j++) {
-            if (tabs[j].getAttribute("data-group") === currentGroup) {
-              tabs[j].className = "group-tab active";
-            } else {
-              tabs[j].className = "group-tab";
-            }
-          }
-          buildPills();
-          // Select first calc in new group if current is not in this group
-          if (currentCalc && currentCalc.group !== currentGroup) {
-            var filtered = calcsForGroup(currentGroup);
-            if (filtered.length > 0) selectCalc(filtered[0]);
-          }
-        });
-      })(tabs[i]);
-    }
-  }
-
-  function calcsForGroup(group) {
-    var result = [];
-    for (var i = 0; i < calcs.length; i++) {
-      if (calcs[i].group === group) result.push(calcs[i]);
-    }
-    return result;
-  }
 
   /* ============================================================
    * PILLS & CALCULATOR SELECTION
@@ -276,10 +239,20 @@
   // Full rebuild — only called after fetch succeeds or language changes.
   function buildPills() {
     if (calcs.length === 0) return;
-    var filtered = calcsForGroup(currentGroup);
     selectorScroll.innerHTML = "";
-    for (var i = 0; i < filtered.length; i++) {
+    var seenGroups = {};
+    for (var i = 0; i < calcs.length; i++) {
       (function(c) {
+        // Insert a labeled divider the first time a group appears
+        if (!seenGroups[c.group]) {
+          seenGroups[c.group] = true;
+          var divider = document.createElement("div");
+          divider.className = "group-divider";
+          var label = document.createElement("span");
+          label.textContent = t("group_" + c.group, c.group);
+          divider.appendChild(label);
+          selectorScroll.appendChild(divider);
+        }
         var pill = document.createElement("button");
         pill.className = "calc-pill";
         if (currentCalc && currentCalc.id === c.id) pill.className += " active";
@@ -287,7 +260,7 @@
         pill.setAttribute("data-id", c.id);
         pill.addEventListener("click", function() { selectCalc(c); });
         selectorScroll.appendChild(pill);
-      })(filtered[i]);
+      })(calcs[i]);
     }
     if (currentCalc) {
       calcDescription.textContent = t(currentCalc.id + "_desc", currentCalc.desc);
@@ -446,7 +419,6 @@
    * ============================================================ */
   buildLangMenu();
   applyTranslations();
-  initGroupTabs();
 
   // Wire up click handlers on the static HTML pills and example chips
   // so the page is fully interactive without any DOM rebuild.

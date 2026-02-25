@@ -240,41 +240,6 @@ header p {
   transform: translateY(-1px);
 }
 
-/* ===== GROUP TABS ===== */
-.group-tabs {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.group-tab {
-  padding: 6px 20px;
-  border-radius: 100px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color var(--transition), color var(--transition), box-shadow var(--transition), background var(--transition);
-  user-select: none;
-}
-
-.group-tab:hover {
-  border-color: var(--border-glow);
-  color: var(--text-primary);
-}
-
-.group-tab.active {
-  background: var(--accent-gradient);
-  border-color: transparent;
-  color: #fff;
-  font-weight: 600;
-  box-shadow: var(--glow-soft);
-}
-
 /* ===== CALCULATOR SELECTOR ===== */
 .selector-section {
   margin-bottom: 28px;
@@ -315,6 +280,31 @@ header p {
   color: #fff;
   font-weight: 600;
   box-shadow: var(--glow-strong);
+}
+
+.group-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.group-divider::before,
+.group-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.group-divider span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .calc-description {

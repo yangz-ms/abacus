@@ -53,7 +53,10 @@ async def calculate(request: CalculateRequest):
     try:
         func = CALCULATORS[request.calculator]["function"]
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, lambda: func(request.expression))
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: func(request.expression)),
+            timeout=5.0,
+        )
         tex_input = input_to_tex(request.expression, request.calculator)
         tex_output = output_to_tex(result, request.calculator)
         return CalculateResponse(
@@ -63,6 +66,15 @@ async def calculate(request: CalculateRequest):
             input_tex=tex_input,
             output_tex=tex_output,
             error=None,
+        )
+    except asyncio.TimeoutError:
+        return CalculateResponse(
+            calculator=request.calculator,
+            expression=request.expression,
+            result="",
+            input_tex="",
+            output_tex="",
+            error="Calculation timed out (limit: 5 seconds)",
         )
     except Exception as e:
         return CalculateResponse(

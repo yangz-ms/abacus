@@ -25,49 +25,98 @@ app.add_middleware(
 CALCULATORS = get_registry()
 
 _CALC_TIMEOUT = 5.0
-_MAX_CONCURRENT = 4
-_calc_semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+_POOL_SIZE = 4
 
 
-def _worker(calculator_id, expression, result_queue):
-    """Target function for the worker process."""
-    try:
-        from calc import get_registry
-        registry = get_registry()
-        func = registry[calculator_id]["function"]
-        result_queue.put(("ok", func(expression)))
-    except Exception as e:
-        result_queue.put(("error", str(e)))
+# ---------------------------------------------------------------------------
+# Persistent worker pool: pre-spawned processes that loop handling requests.
+# On timeout the stuck worker is killed and a fresh one takes its place.
+# ---------------------------------------------------------------------------
+
+def _worker_loop(work_q, result_q):
+    """Long-lived worker: import once, handle many requests."""
+    from calc import get_registry
+    registry = get_registry()
+    while True:
+        calc_id, expr = work_q.get()
+        try:
+            result = registry[calc_id]["function"](expr)
+            result_q.put(("ok", result))
+        except Exception as e:
+            result_q.put(("error", str(e)))
 
 
-async def _run_calc_with_timeout(calculator_id, expression):
-    """Run calculation in a subprocess that gets killed on timeout."""
-    queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_worker,
-        args=(calculator_id, expression, queue),
-        daemon=True,
-    )
-    proc.start()
+class _WorkerPool:
+    def __init__(self, size):
+        self._size = size
+        self._available = None  # asyncio.Queue, created lazily
+        self._workers = []
 
-    loop = asyncio.get_event_loop()
-    try:
-        # Poll the queue in a thread so we don't block the event loop
-        status, value = await asyncio.wait_for(
-            loop.run_in_executor(None, queue.get, True, _CALC_TIMEOUT + 1),
-            timeout=_CALC_TIMEOUT,
-        )
-    except (asyncio.TimeoutError, Exception):
-        # Kill the process immediately
-        proc.kill()
-        proc.join(timeout=1)
-        raise asyncio.TimeoutError()
+    def _ensure_started(self):
+        if self._available is not None:
+            return
+        self._available = asyncio.Queue()
+        for _ in range(self._size):
+            self._spawn()
 
-    proc.join(timeout=1)
-    if status == "error":
-        raise Exception(value)
-    return value
+    def _spawn(self):
+        wq = multiprocessing.Queue()
+        rq = multiprocessing.Queue()
+        p = multiprocessing.Process(target=_worker_loop, args=(wq, rq), daemon=True)
+        p.start()
+        worker = (p, wq, rq)
+        self._workers.append(worker)
+        self._available.put_nowait(worker)
 
+    async def run(self, calc_id, expression):
+        self._ensure_started()
+
+        # Get an available worker (wait up to 1s, else "server busy")
+        try:
+            worker = await asyncio.wait_for(self._available.get(), timeout=1.0)
+        except asyncio.TimeoutError:
+            raise Exception("Server busy, please try again shortly")
+
+        proc, work_q, result_q = worker
+
+        # Replace dead workers
+        if not proc.is_alive():
+            self._workers.remove(worker)
+            self._spawn()
+            worker = await self._available.get()
+            proc, work_q, result_q = worker
+
+        work_q.put((calc_id, expression))
+
+        loop = asyncio.get_event_loop()
+        try:
+            status, value = await asyncio.wait_for(
+                loop.run_in_executor(None, result_q.get, True, _CALC_TIMEOUT + 1),
+                timeout=_CALC_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            # Kill the stuck worker and spawn a replacement
+            proc.kill()
+            proc.join(timeout=1)
+            if worker in self._workers:
+                self._workers.remove(worker)
+            self._spawn()
+            raise
+
+        # Return worker to pool
+        self._available.put_nowait(worker)
+
+        if status == "error":
+            raise Exception(value)
+        return value
+
+
+_pool = _WorkerPool(_POOL_SIZE)
+
+
+# ---------------------------------------------------------------------------
+# API
+# ---------------------------------------------------------------------------
 
 class CalculateRequest(BaseModel):
     calculator: str
@@ -95,49 +144,36 @@ async def calculate(request: CalculateRequest):
             error=f"Unknown calculator: {request.calculator}",
         )
 
-    if _calc_semaphore._value <= 0:
+    try:
+        result = await _pool.run(request.calculator, request.expression)
+        tex_input = input_to_tex(request.expression, request.calculator)
+        tex_output = output_to_tex(result, request.calculator)
+        return CalculateResponse(
+            calculator=request.calculator,
+            expression=request.expression,
+            result=result,
+            input_tex=tex_input,
+            output_tex=tex_output,
+            error=None,
+        )
+    except asyncio.TimeoutError:
         return CalculateResponse(
             calculator=request.calculator,
             expression=request.expression,
             result="",
             input_tex="",
             output_tex="",
-            error="Server busy, please try again shortly",
+            error="Calculation timed out (limit: 5 seconds)",
         )
-
-    async with _calc_semaphore:
-        try:
-            result = await _run_calc_with_timeout(
-                request.calculator, request.expression
-            )
-            tex_input = input_to_tex(request.expression, request.calculator)
-            tex_output = output_to_tex(result, request.calculator)
-            return CalculateResponse(
-                calculator=request.calculator,
-                expression=request.expression,
-                result=result,
-                input_tex=tex_input,
-                output_tex=tex_output,
-                error=None,
-            )
-        except asyncio.TimeoutError:
-            return CalculateResponse(
-                calculator=request.calculator,
-                expression=request.expression,
-                result="",
-                input_tex="",
-                output_tex="",
-                error="Calculation timed out (limit: 5 seconds)",
-            )
-        except Exception as e:
-            return CalculateResponse(
-                calculator=request.calculator,
-                expression=request.expression,
-                result="",
-                input_tex="",
-                output_tex="",
-                error=str(e),
-            )
+    except Exception as e:
+        return CalculateResponse(
+            calculator=request.calculator,
+            expression=request.expression,
+            result="",
+            input_tex="",
+            output_tex="",
+            error=str(e),
+        )
 
 
 @app.get("/api/calculators")

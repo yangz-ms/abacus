@@ -1,5 +1,6 @@
 import asyncio
 import os
+from concurrent.futures import ProcessPoolExecutor
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,19 @@ app.add_middleware(
 )
 
 CALCULATORS = get_registry()
+
+# Limit concurrent calculations so heavy requests can't saturate the server
+_MAX_CONCURRENT = 4
+_calc_semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+_process_pool = ProcessPoolExecutor(max_workers=_MAX_CONCURRENT)
+
+
+def _run_calc(calculator_id, expression):
+    """Run a calculation in a worker process (isolated from the main event loop)."""
+    from calc import get_registry
+    registry = get_registry()
+    func = registry[calculator_id]["function"]
+    return func(expression)
 
 
 class CalculateRequest(BaseModel):
@@ -50,41 +64,58 @@ async def calculate(request: CalculateRequest):
             error=f"Unknown calculator: {request.calculator}",
         )
 
-    try:
-        func = CALCULATORS[request.calculator]["function"]
-        loop = asyncio.get_event_loop()
-        result = await asyncio.wait_for(
-            loop.run_in_executor(None, lambda: func(request.expression)),
-            timeout=5.0,
-        )
-        tex_input = input_to_tex(request.expression, request.calculator)
-        tex_output = output_to_tex(result, request.calculator)
-        return CalculateResponse(
-            calculator=request.calculator,
-            expression=request.expression,
-            result=result,
-            input_tex=tex_input,
-            output_tex=tex_output,
-            error=None,
-        )
-    except asyncio.TimeoutError:
+    acquired = _calc_semaphore._value > 0
+    if not acquired:
+        # All slots busy — reject immediately instead of queuing
         return CalculateResponse(
             calculator=request.calculator,
             expression=request.expression,
             result="",
             input_tex="",
             output_tex="",
-            error="Calculation timed out (limit: 5 seconds)",
+            error="Server busy, please try again shortly",
         )
-    except Exception as e:
-        return CalculateResponse(
-            calculator=request.calculator,
-            expression=request.expression,
-            result="",
-            input_tex="",
-            output_tex="",
-            error=str(e),
-        )
+
+    async with _calc_semaphore:
+        try:
+            loop = asyncio.get_event_loop()
+            result = await asyncio.wait_for(
+                loop.run_in_executor(
+                    _process_pool,
+                    _run_calc,
+                    request.calculator,
+                    request.expression,
+                ),
+                timeout=5.0,
+            )
+            tex_input = input_to_tex(request.expression, request.calculator)
+            tex_output = output_to_tex(result, request.calculator)
+            return CalculateResponse(
+                calculator=request.calculator,
+                expression=request.expression,
+                result=result,
+                input_tex=tex_input,
+                output_tex=tex_output,
+                error=None,
+            )
+        except asyncio.TimeoutError:
+            return CalculateResponse(
+                calculator=request.calculator,
+                expression=request.expression,
+                result="",
+                input_tex="",
+                output_tex="",
+                error="Calculation timed out (limit: 5 seconds)",
+            )
+        except Exception as e:
+            return CalculateResponse(
+                calculator=request.calculator,
+                expression=request.expression,
+                result="",
+                input_tex="",
+                output_tex="",
+                error=str(e),
+            )
 
 
 @app.get("/api/calculators")
